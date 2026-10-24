@@ -1,6 +1,8 @@
 /** Browser-safe shapes exchanged between the play screen and the game server functions. */
 export interface SessionHero {
   id: string;
+  /** Global sequential mint number (#1234); absent on starter heroes. */
+  mintedNumber?: number;
   name: string;
   type: string;
   rarity: string;
