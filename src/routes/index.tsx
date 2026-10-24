@@ -54,31 +54,21 @@ const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
 ];
 
 function EnterMineButton({ size = "lg" }: { size?: "lg" | "default" }) {
+  const connected = useAuthStore((s) => s.player !== null);
+  if (!connected)
+    return (
+      <ConnectWalletModal>
+        <Button size={size} className="gap-2">
+          <Gamepad2 className="size-4" /> Enter the mine
+        </Button>
+      </ConnectWalletModal>
+    );
   return (
     <Button asChild size={size} className="gap-2">
       <Link to="/play">
         <Gamepad2 className="size-4" /> Enter the mine
       </Link>
     </Button>
-  );
-}
-
-function WalletButton() {
-  const connected = useAuthStore((s) => s.player !== null);
-  if (connected)
-    return (
-      <Button asChild size="lg" variant="outline" className="gap-2">
-        <Link to="/play">
-          <Gamepad2 className="size-4" /> Enter the mine
-        </Link>
-      </Button>
-    );
-  return (
-    <ConnectWalletModal>
-      <Button size="lg" variant="outline" className="gap-2">
-        <Wallet className="size-4" /> Connect wallet
-      </Button>
-    </ConnectWalletModal>
   );
 }
 
