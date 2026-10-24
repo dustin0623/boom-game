@@ -167,6 +167,7 @@ export function applyCommand(
   if (Object.values(state.heroes).filter((h) => h.onMap).length >= MAX_ON_MAP) return "MAP_FULL";
   hero.onMap = true;
   spawnHero(state, hero);
+  return undefined;
 }
 export function advanceStage(state: GameState): boolean {
   if (state.bombs && Object.keys(state.bombs).length) return false;

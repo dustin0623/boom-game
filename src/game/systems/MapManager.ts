@@ -4,7 +4,7 @@ import { CHEST_TEXTURE, ChestRarity } from "@/game/data/ChestRarity";
 import type { GameNode, GameState } from "@/lib/game/dungeon/types";
 import { isWall } from "@/lib/game/dungeon/simulation";
 
-const PALETTES = [
+const PALETTES: [number, number, number, number][] = [
   [0x4ea24e, 0x3d7a3d, 0x555555, 0x333333],
   [0xc9a26b, 0x8a6a3f, 0x7a4a2a, 0x4a2a15],
   [0x6b7a99, 0x3f4a63, 0x2f3a52, 0x1a1f2e],
