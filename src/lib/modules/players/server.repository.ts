@@ -62,7 +62,9 @@ export const playerRepository: PlayerRepository = {
     return data ? toDoc(data as PlayerRow) : null;
   },
   async create(data) {
-    const { data: row, error } = await (await db())
+    const admin = await db();
+    const seed = rollSeed();
+    const { data: row, error } = await admin
       .from("players")
       .insert({
         username: data.username,
@@ -72,12 +74,35 @@ export const playerRepository: PlayerRepository = {
         password_hash: data.passwordHash,
         is_test: false,
         token_hash: "",
-        seed: rollSeed(),
-        heroes: starterHeroes() as never,
+        seed,
       })
       .select("*")
       .single();
     if (error || !row) throw new Error(error?.message ?? "Could not create player");
+    const playerId = (row as PlayerRow).id;
+    // Every player gets their own stage map and four starter bombers.
+    const { error: mapError } = await admin
+      .from("stage_maps")
+      .insert({ player_id: playerId, stage: 1, seed });
+    if (mapError) throw new Error(mapError.message);
+    const { error: heroesError } = await admin.from("heroes").insert(
+      starterHeroes().map((h) => ({
+        id: h.id,
+        player_id: playerId,
+        name: h.name,
+        type: h.type,
+        rarity: h.rarity,
+        power: h.power,
+        speed: h.speed,
+        stamina: h.stamina,
+        bomb_number: h.bombNumber,
+        bomb_range: h.bombRange,
+        max_energy: h.maxEnergy,
+        energy: h.maxEnergy,
+        on_map: false,
+      })),
+    );
+    if (heroesError) throw new Error(heroesError.message);
     return toDoc(row as PlayerRow);
   },
   async linkEmailAndPassword(id, email, passwordHash) {
