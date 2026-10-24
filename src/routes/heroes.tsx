@@ -10,13 +10,13 @@ import { listInventory, openChest, type InventorySnapshot } from "@/lib/game/inv
 import { SHOP_ITEM_BY_ID } from "@/lib/game/shop/items";
 import type { SessionHero } from "@/lib/game/session/types";
 
-export const Route = createFileRoute("/inventory")({
+export const Route = createFileRoute("/heroes")({
   head: () => ({
     meta: [
-      { title: "Inventory — Chainframe" },
-      { name: "description", content: "Your bombers and unopened chests." },
-      { property: "og:title", content: "Inventory — Chainframe" },
-      { property: "og:description", content: "Your bombers and unopened chests." },
+      { title: "Heroes — Chainframe" },
+      { name: "description", content: "Your bombers, their stats and rarities." },
+      { property: "og:title", content: "Heroes — Chainframe" },
+      { property: "og:description", content: "Your bombers, their stats and rarities." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -75,7 +75,7 @@ function Page() {
 
   return (
     <>
-      <PageHeader title="Inventory" description="Your bombers and unopened chests." />
+      <PageHeader title="Inventory" description="Your bombers, their stats and rarities." />
       {message && <p className="mb-4 text-sm text-muted-foreground">{message}</p>}
 
       <section className="mb-8 space-y-3">
