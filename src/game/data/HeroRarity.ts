@@ -99,7 +99,7 @@ export enum HeroType {
 
 export const HERO_TYPES: HeroType[] = Object.values(HeroType);
 
-/** Sprite sheet key for each hero type. Files live in /assets/characters/. */
+/** Sprite sheet key for each hero type. Files live in /public/game/sprites/players/. */
 export const HERO_SPRITES: Record<HeroType, string> = {
   [HeroType.Ricky]:   "ricky",
   [HeroType.Rocky]:   "rocky",
