@@ -15,7 +15,7 @@ const RARITY: Record<string, { ring: string; bg: string; text: string; border: s
 };
 
 export function rarityClasses(rarity: string) {
-  return RARITY[rarity] ?? RARITY.common!;
+  return RARITY[rarity] ?? RARITY["common"]!;
 }
 
 /** Hero card styled after the Chainframe equipment card: rarity rim, icon tile, badges and stat chips. */
