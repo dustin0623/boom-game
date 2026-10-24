@@ -26,4 +26,11 @@
 - [x] Chainframe theme, sidebar shell, landing page, page placeholders
 - [x] XRPL-only sign-in via Xaman QR / deep link (email and other wallets off)
 - [ ] Add XAMAN_API_KEY / XAMAN_API_SECRET (blocked: needs your Xaman developer account)
-- [ ] Build out Dashboard, Inventory, Shop, Marketplace, Leaderboard content
+- [x] Dashboard replaced by Play (Phaser bomber game, local demo)
+- [ ] Build out Inventory, Shop, Marketplace, Leaderboard content
+
+## Bomber homepage + Phaser game
+- [x] Boom-Miner art, Phaser scenes and simulation ported
+- [x] Homepage with live game backdrop, crew roster, Play demo + Connect wallet
+- [x] Play demo button in the sign-in window
+- [ ] Save real progress (blocked: waits on the planned backend)

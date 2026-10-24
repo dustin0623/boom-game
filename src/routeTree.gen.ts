@@ -10,20 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as PlayRouteImport } from './routes/play'
 import { Route as ShopRouteImport } from './routes/shop'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -41,6 +36,11 @@ const MarketplaceRoute = MarketplaceRouteImport.update({
   path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayRoute = PlayRouteImport.update({
+  id: '/play',
+  path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
@@ -49,62 +49,51 @@ const ShopRoute = ShopRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
+  '/play': typeof PlayRoute
   '/shop': typeof ShopRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
+  '/play': typeof PlayRoute
   '/shop': typeof ShopRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
+  '/play': typeof PlayRoute
   '/shop': typeof ShopRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/dashboard'
-    | '/inventory'
-    | '/leaderboard'
-    | '/marketplace'
-    | '/shop'
+    '/' | '/inventory' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/dashboard'
-    | '/inventory'
-    | '/leaderboard'
-    | '/marketplace'
-    | '/shop'
+  to: '/' | '/inventory' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
   id:
     | '__root__'
     | '/'
-    | '/dashboard'
     | '/inventory'
     | '/leaderboard'
     | '/marketplace'
+    | '/play'
     | '/shop'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
   InventoryRoute: typeof InventoryRoute
   LeaderboardRoute: typeof LeaderboardRoute
   MarketplaceRoute: typeof MarketplaceRoute
+  PlayRoute: typeof PlayRoute
   ShopRoute: typeof ShopRoute
 }
 
@@ -115,13 +104,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -145,6 +127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play': {
+      id: '/play'
+      path: '/play'
+      fullPath: '/play'
+      preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
       id: '/shop'
       path: '/shop'
@@ -157,10 +146,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
   InventoryRoute: InventoryRoute,
   LeaderboardRoute: LeaderboardRoute,
   MarketplaceRoute: MarketplaceRoute,
+  PlayRoute: PlayRoute,
   ShopRoute: ShopRoute,
 }
 export const routeTree = rootRouteImport
