@@ -57,7 +57,7 @@ export class TreasureScene extends Phaser.Scene {
     this.map = new MapManager(this);
     this.session = useGameStore.getState().session;
     this.pendingKeys.clear();
-    this.reportedKeys = new Set(result.destroyedNodes);
+    this.reportedKeys = new Set<string>();
     this.syncElapsed = 0;
     this.syncing = false;
     this.awaitingStage = false;
