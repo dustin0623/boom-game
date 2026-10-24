@@ -235,6 +235,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
       if (!hero.onMap) hero.recoveryAt = now;
     }
     result.effects.push({ type: "explosion", id: bomb.id, tiles });
+    result.resolvedBombs.push(bomb.id);
+    result.durable = true;
   }
   // Working heroes never recover. Pin their rest clock to now, and recall any
   // hero that can no longer afford a bomb straight off the map.
@@ -248,8 +250,6 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
       hero.target = null;
       result.durable = true;
     }
-    result.resolvedBombs.push(bomb.id);
-    result.durable = true;
   }
   result.rewards.sort((a, b) => {
     const [ax = 0, ay = 0] = a.nodeKey.split(",").map(Number),
