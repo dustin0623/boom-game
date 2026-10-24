@@ -5,6 +5,7 @@ import { HeroSprite } from "@/components/game/HeroSprite";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
+import { useGameStore } from "@/features/stores/game.store";
 import { HERO_RARITY_DEFS, HERO_SPRITES, HeroRarity, type HeroType } from "@/game/data/HeroRarity";
 import { listInventory } from "@/lib/game/inventory/inventory.functions";
 import { mintHeroes } from "@/lib/game/heroes/heroes.functions";
@@ -51,6 +52,7 @@ function Page() {
       const result = await mintHeroes({ data: { playerId: player.id, token, count: qty } });
       setCoins(result.coins);
       setMinted(result.heroes);
+      useGameStore.getState().addHeroes(result.heroes);
       setMessage(`${result.heroes.length} hero${result.heroes.length > 1 ? "es" : ""} joined your crew.`);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Mint failed");
