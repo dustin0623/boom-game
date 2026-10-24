@@ -1,20 +1,5 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1792823645472,
-      "tag": "0000_migration",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1792827551868,
-      "tag": "0001_player_profiles_and_inventory",
-      "breakpoints": true
-    }
-  ]
+  "entries": []
 }
