@@ -154,5 +154,5 @@ export function rollHeroAttributes(rarity: HeroRarity, rand: () => number = Math
 }
 
 export function pickHeroType(rand: () => number = Math.random): HeroType {
-  return HERO_TYPES[Math.floor(rand() * HERO_TYPES.length)];
+  return HERO_TYPES[Math.floor(rand() * HERO_TYPES.length)]!;
 }

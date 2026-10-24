@@ -10,7 +10,7 @@ export function energyAfterRest(
   rarity: string,
   elapsedMs: number,
 ): number {
-  const fraction = RARITY_RECOVERY_FRACTION[rarity] ?? RARITY_RECOVERY_FRACTION.common;
+  const fraction = RARITY_RECOVERY_FRACTION[rarity] ?? RARITY_RECOVERY_FRACTION['common'] ?? 0;
   return Math.min(
     maxEnergy,
     energy + (maxEnergy * fraction * Math.max(0, elapsedMs)) / 1000 / RECOVERY_INTERVAL_SECONDS,

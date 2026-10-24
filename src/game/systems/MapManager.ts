@@ -29,7 +29,7 @@ export class MapManager {
       this.sprites.forEach((sprite) => sprite.destroy());
       this.sprites.clear();
       this.nodes = {};
-      const [fill, stroke, wall, wallStroke] = PALETTES[(state.stage - 1) % PALETTES.length];
+      const [fill, stroke, wall, wallStroke] = PALETTES[(state.stage - 1) % PALETTES.length]!;
       this.ground.clear();
       for (let y = 0; y < MAP_HEIGHT; y++)
         for (let x = 0; x < MAP_WIDTH; x++) {

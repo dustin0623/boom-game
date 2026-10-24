@@ -87,7 +87,7 @@ export function generateStageMap(
   const grassTiles: { x: number; y: number }[] = [];
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
-      if (grid[y][x] !== TileType.Grass) continue;
+      if (grid[y]![x] !== TileType.Grass) continue;
       if (spawnFree.has(`${x},${y}`)) continue;
       grassTiles.push({ x, y });
     }
@@ -96,7 +96,7 @@ export function generateStageMap(
   // Shuffle tiles with the seeded PRNG so placement is deterministic.
   for (let i = grassTiles.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
-    [grassTiles[i], grassTiles[j]] = [grassTiles[j], grassTiles[i]];
+    [grassTiles[i], grassTiles[j]] = [grassTiles[j]!, grassTiles[i]!];
   }
 
   const nodes: MapNode[] = [];

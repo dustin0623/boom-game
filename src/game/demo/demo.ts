@@ -37,7 +37,7 @@ export function createDemo(source: GameState): GameState {
   const rarities = [HeroRarity.Common, HeroRarity.Uncommon, HeroRarity.Rare, HeroRarity.Epic];
   const types = Object.values(HeroType);
   for (let i = 0; i < rarities.length; i++) {
-    const rarity = rarities[i];
+    const rarity = rarities[i]!;
     const attrs = rollHeroAttributes(rarity);
     const hero: GameHero = {
       id: `demo-${i}`,
@@ -45,7 +45,7 @@ export function createDemo(source: GameState): GameState {
       name: "Demo",
       mintedNumber: i,
       level: 1,
-      type: types[(i * 3) % types.length],
+      type: types[(i * 3) % types.length]!,
       rarity,
       power: attrs.power,
       speed: attrs.speed,

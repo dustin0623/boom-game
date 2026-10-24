@@ -28,7 +28,7 @@ export function isWall(x: number, y: number): boolean {
   );
 }
 export function walkable(state: GameState, p: Point): boolean {
-  return !isWall(p.x, p.y) && (!state.nodes[keyOf(p)] || state.nodes[keyOf(p)].destroyed);
+  return !isWall(p.x, p.y) && (!state.nodes[keyOf(p)] || state.nodes[keyOf(p)]!.destroyed);
 }
 function random(state: GameState): number {
   let t = (state.random = (state.random + 0x6d2b79f5) >>> 0);
@@ -68,7 +68,7 @@ function search(
     return path.reverse();
   };
   for (let i = 0; i < queue.length; i++) {
-    const p = queue[i];
+    const p = queue[i]!;
     if (!danger.has(keyOf(p))) {
       for (const d of DIRECTIONS) {
         const target = keyOf({ x: p.x + d.x, y: p.y + d.y });
@@ -88,7 +88,7 @@ function search(
     (p) => !danger.has(keyOf(p)) && Math.abs(p.x - start.x) + Math.abs(p.y - start.y) >= 3,
   );
   return {
-    path: choices.length ? pathTo(choices[Math.floor(random(state) * choices.length)]) : [],
+    path: choices.length ? pathTo(choices[Math.floor(random(state) * choices.length)]!) : [],
     target: null,
   };
 }
@@ -97,7 +97,7 @@ function escape(state: GameState, hero: GameHero, danger: Set<string>): Point[] 
   const queue: { p: Point; path: Point[] }[] = [{ p: start, path: [] }];
   const seen = new Set([keyOf(start)]);
   for (let i = 0; i < queue.length; i++) {
-    const { p, path } = queue[i];
+    const { p, path } = queue[i]!;
     if (!danger.has(keyOf(p))) return path;
     for (const d of DIRECTIONS) {
       const next = { x: p.x + d.x, y: p.y + d.y };
@@ -136,7 +136,7 @@ export function refreshAllowance(state: GameState, now: number): void {
   const date = utcDate(now);
   if (state.daily.date !== date) state.daily = { date, used: 0, cap: state.daily.cap };
   state.daily.cap = Object.values(state.heroes).reduce(
-    (sum, h) => sum + (DAILY_CHEST_CAP_PER_HERO[h.rarity] ?? DAILY_CHEST_CAP_PER_HERO.common),
+    (sum, h) => sum + (DAILY_CHEST_CAP_PER_HERO[h.rarity] ?? DAILY_CHEST_CAP_PER_HERO['common'] ?? 0),
     0,
   );
 }
@@ -201,8 +201,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     if (bomb.dueAt > state.time) continue;
     const tiles = blastTiles(state, bomb);
     const keys = tiles.map(keyOf).sort((a, b) => {
-      const [ax, ay] = a.split(",").map(Number),
-        [bx, by] = b.split(",").map(Number);
+      const [ax = 0, ay = 0] = a.split(",").map(Number),
+        [bx = 0, by = 0] = b.split(",").map(Number);
       return ay - by || ax - bx;
     });
     for (const key of keys) {
@@ -238,8 +238,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     result.durable = true;
   }
   result.rewards.sort((a, b) => {
-    const [ax, ay] = a.nodeKey.split(",").map(Number),
-      [bx, by] = b.nodeKey.split(",").map(Number);
+    const [ax = 0, ay = 0] = a.nodeKey.split(",").map(Number),
+      [bx = 0, by = 0] = b.nodeKey.split(",").map(Number);
     return ay - by || ax - bx;
   });
   for (const reward of result.rewards) {
@@ -270,7 +270,7 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     }
     let distance = (movementSpeed(hero.speed) * Math.max(0, Math.min(deltaMs, 100))) / 1000;
     while (hero.path.length && distance > 0) {
-      const p = hero.path[0];
+      const p = hero.path[0]!;
       if (!walkable(state, p)) {
         hero.path = [];
         hero.target = null;
@@ -296,7 +296,7 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
         x: Math.round(hero.x),
         y: Math.round(hero.y),
         range: hero.bombRange,
-      }).some((p) => state.nodes[keyOf(p)] && !state.nodes[keyOf(p)].destroyed);
+      }).some((p) => state.nodes[keyOf(p)] && !state.nodes[keyOf(p)]!.destroyed);
       if (owned < hero.bombNumber && hero.energy - owned >= 1 && hit) {
         const id = `${state.mapId}:bomb:${++state.bombSerial}`;
         const bomb: GameBomb = {

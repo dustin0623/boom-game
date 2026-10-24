@@ -131,7 +131,7 @@ export class TreasureScene extends Phaser.Scene {
       });
     }
   }
-  update(_time: number, delta: number): void {
+  override update(_time: number, delta: number): void {
     if (useGameStore.getState().paused) return;
     if (this.demo) {
       this.demoElapsed += delta;
