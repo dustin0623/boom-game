@@ -31,7 +31,14 @@ export class TreasureScene extends Phaser.Scene {
     this.demo = createDemoState();
     useGameStore.getState().reset();
     this.apply(this.demo, []);
+    // Kill any boom one-shots the moment the tab is hidden so they cannot pile
+    // up while Phaser's audio is paused and blast all at once on return.
+    const stopBooms = () => this.sound.getAll("boom_sfx").forEach((s) => s.stop());
+    document.addEventListener("visibilitychange", stopBooms);
+    window.addEventListener("blur", stopBooms);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      document.removeEventListener("visibilitychange", stopBooms);
+      window.removeEventListener("blur", stopBooms);
       this.clearEntities();
       this.demo = null;
     });
@@ -104,7 +111,9 @@ export class TreasureScene extends Phaser.Scene {
         sprite.play(STATIC_ANIMS[0].key);
         this.time.delayedCall(GAME_CONFIG.EXPLOSION.DURATION_MS, () => sprite.destroy());
       }
-      if (this.cache.audio.exists("boom_sfx"))
+      // Never queue a boom while the tab is hidden — Phaser pauses audio on
+      // blur and would replay every queued explosion simultaneously on return.
+      if (this.cache.audio.exists("boom_sfx") && !document.hidden)
         this.sound.play("boom_sfx", { volume: GAME_CONFIG.EXPLOSION.SFX_VOLUME });
       this.cameras.main.shake(
         GAME_CONFIG.EXPLOSION.SHAKE_DURATION_MS,
@@ -131,6 +140,9 @@ export class TreasureScene extends Phaser.Scene {
     }
   }
   override update(_time: number, delta: number): void {
+    // Clamp delta so a throttled background tab doesn't inject a multi-second
+    // spike into the loop on the first frame back.
+    delta = Math.min(delta, 250);
     if (this.demo) {
       this.demoElapsed += delta;
       if (this.demoElapsed >= TICK_MS) {
