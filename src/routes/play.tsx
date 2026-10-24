@@ -8,6 +8,7 @@ import { HeroesDrawer } from "@/components/game/HeroesDrawer";
 import { useAuthStore } from "@/features/stores/auth.store";
 import { useGameStore, type SaveStatus } from "@/features/stores/game.store";
 import { loadGameSession, syncProgress } from "@/lib/game/session/session.functions";
+import { saveHeroesState } from "@/lib/game/heroes/heroes.functions";
 
 export const Route = createFileRoute("/play")({
   head: () => ({
@@ -69,8 +70,11 @@ function PlayPage() {
     loadGameSession({ data: { playerId: player.id, token } })
       .then((loaded) => {
         if (cancelled) return;
-        setSession(loaded, (seed, keys) =>
-          syncProgress({ data: { playerId: player.id, token, seed, keys } }),
+        setSession(
+          loaded,
+          (seed, keys) => syncProgress({ data: { playerId: player.id, token, seed, keys } }),
+          (heroes) =>
+            saveHeroesState({ data: { playerId: player.id, token, heroes } }).then(() => {}),
         );
       })
       .catch(() => !cancelled && setSaveStatus("error"));

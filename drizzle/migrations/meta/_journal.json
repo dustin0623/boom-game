@@ -8,6 +8,13 @@
       "when": 1792823645472,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792836813679,
+      "tag": "0001_retire_player_inventory",
+      "breakpoints": true
     }
   ]
 }
