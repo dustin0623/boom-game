@@ -41,8 +41,10 @@ export const listInventory = createServerFn({ method: "POST" })
 
 /**
  * Opens a chest from the inventory: consumes one, rolls a bomber of the
- * chest's rarity and adds it to the roster. The roster write is guarded on
- * updated_at so two opens can never consume one chest twice.
+ * chest's rarity and adds it to the roster. The consume and the roster append
+ * happen in one atomic database transaction (open_chest), so two opens can
+ * never consume one chest twice. The bomber's name number is assigned by the
+ * database from the roster length.
  */
 export const openChest = createServerFn({ method: "POST" })
   .inputValidator((input: { playerId?: string; token?: string; itemId?: string }) => {
@@ -56,29 +58,10 @@ export const openChest = createServerFn({ method: "POST" })
     const row = await requirePlayer(data.playerId, data.token);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: owned } = await supabaseAdmin
-      .from("player_inventory")
-      .select("id, quantity")
-      .eq("player_id", row.id)
-      .eq("item_id", item.id)
-      .maybeSingle();
-    if (!owned || owned.quantity < 1) throw new Error("You don't own this chest");
-
-    const remaining = owned.quantity - 1;
-    const { data: consumed } = await supabaseAdmin
-      .from("player_inventory")
-      .update({ quantity: remaining, updated_at: new Date().toISOString() })
-      .eq("id", owned.id)
-      .gt("quantity", 0)
-      .select("id")
-      .maybeSingle();
-    if (!consumed) throw new Error("You don't own this chest");
-
     const attrs = rollHeroAttributes(item.heroRarity);
-    const heroes = row.heroes as SessionHero[];
     const hero: SessionHero = {
       id: `hero-${crypto.randomUUID()}`,
-      name: `Bomber #${heroes.length + 1}`,
+      name: "", // Assigned by open_chest from the current roster length.
       type: pickHeroType(),
       rarity: item.heroRarity,
       power: attrs.power,
@@ -89,21 +72,23 @@ export const openChest = createServerFn({ method: "POST" })
       maxEnergy: attrs.energy,
     };
 
-    const { data: saved } = await supabaseAdmin
-      .from("players")
-      .update({ heroes: [...heroes, hero] as never, updated_at: new Date().toISOString() })
-      .eq("id", row.id)
-      .eq("updated_at", row.updated_at)
-      .select("id")
-      .maybeSingle();
-    if (!saved) {
-      // Roster changed under us — refund the chest and ask the player to retry.
-      await supabaseAdmin
-        .from("player_inventory")
-        .update({ quantity: owned.quantity, updated_at: new Date().toISOString() })
-        .eq("id", owned.id);
-      throw new Error("Something changed while opening — try again");
+    const { data: result, error } = await supabaseAdmin.rpc("open_chest", {
+      p_player_id: row.id,
+      p_item_id: item.id,
+      p_hero: hero as never,
+    });
+    if (error) {
+      if (error.message.includes("chest_not_owned")) throw new Error("You don't own this chest");
+      throw new Error("Could not open the chest — try again");
     }
+    const { remaining } = result as { remaining: number };
 
-    return { hero, remaining };
+    // Read back the roster name the database assigned.
+    const { data: fresh } = await supabaseAdmin
+      .from("players")
+      .select("heroes")
+      .eq("id", row.id)
+      .single();
+    const saved = (fresh?.heroes as SessionHero[] | null)?.find((h) => h.id === hero.id);
+    return { hero: saved ?? hero, remaining: Number(remaining) };
   });

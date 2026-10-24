@@ -80,9 +80,10 @@ export const listWalletTransactions = createServerFn({ method: "POST" })
   });
 
 /**
- * Queues a withdrawal of mined coins to the player's own wallet. Coins are
- * debited immediately with a balance guard; a worker picks up the pending row
- * and sends the on-chain payment.
+ * Queues a withdrawal of mined coins to the player's own wallet. The coin
+ * debit and the queued payout happen in one atomic database transaction
+ * (request_withdrawal); a worker picks up the pending row and sends the
+ * on-chain payment.
  */
 export const requestWithdrawal = createServerFn({ method: "POST" })
   .inputValidator((input: { playerId?: string; token?: string; amount?: number }) => {
@@ -96,32 +97,15 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
     if (!row.wallet_address) throw new Error("No wallet linked to this account");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: debited } = await supabaseAdmin
-      .from("players")
-      .update({ coins: Number(row.coins) - data.amount, updated_at: new Date().toISOString() })
-      .eq("id", row.id)
-      .gte("coins", data.amount)
-      .select("coins")
-      .maybeSingle();
-    if (!debited) throw new Error("Not enough coins");
-
-    const { data: tx, error } = await supabaseAdmin
-      .from("transactions_pending")
-      .insert({
-        player_id: row.id,
-        action: "withdraw",
-        payload: { amount: data.amount, address: row.wallet_address },
-      })
-      .select("id")
-      .single();
-    if (error || !tx) {
-      // Refund the debit if the queue write failed.
-      await supabaseAdmin
-        .from("players")
-        .update({ coins: Number(row.coins), updated_at: new Date().toISOString() })
-        .eq("id", row.id);
+    const { data: result, error } = await supabaseAdmin.rpc("request_withdrawal", {
+      p_player_id: row.id,
+      p_amount: data.amount,
+      p_address: row.wallet_address,
+    });
+    if (error) {
+      if (error.message.includes("not_enough_coins")) throw new Error("Not enough coins");
       throw new Error("Could not queue the withdrawal — try again");
     }
-
-    return { coins: Number(debited.coins), transactionId: tx.id };
+    const { coins, transaction_id } = result as { coins: number; transaction_id: string };
+    return { coins: Number(coins), transactionId: transaction_id };
   });
