@@ -12,25 +12,24 @@
 - [x] Pending/processed transaction modules + poller, tests discoverable, docs updated
 - [x] Unified processor + dev in-app worker + transaction status lookup
 
-## Later
-- [ ] Persist players in MongoDB (currently in-memory mock)
-- [ ] XRPL module events
-- [ ] Game scenes behind login
-- [ ] Add the Solana treasury key + RPC key as secrets before server-signed payouts
-
-## XRPL login
-- [x] Xaman (QR + deep link), Joey (WalletConnect), GemWallet
-- [ ] Add XAMAN_API_KEY / XAMAN_API_SECRET secrets and VITE_REOWN_PROJECT_ID (blocked: needs your developer accounts)
-
 ## Chainframe layout + XRPL-only auth
 - [x] Chainframe theme, sidebar shell, landing page, page placeholders
 - [x] XRPL-only sign-in via Xaman QR / deep link (email and other wallets off)
-- [ ] Add XAMAN_API_KEY / XAMAN_API_SECRET (blocked: needs your Xaman developer account)
-- [x] Dashboard replaced by Play (Phaser bomber game, local demo)
-- [ ] Build out Inventory, Shop, Marketplace, Leaderboard content
+- [x] Xaman API_KEY / API_SECRET secrets configured
+- [x] Dashboard replaced by Play (Phaser bomber game)
 
-## Bomber homepage + Phaser game
-- [x] Boom-Miner art, Phaser scenes and simulation ported
-- [x] Homepage with live game backdrop, crew roster, Play demo + Connect wallet
-- [x] Play demo button in the sign-in window
-- [ ] Save real progress (blocked: waits on the planned backend)
+## Game backend (Lovable Cloud)
+- [x] Players persisted in the cloud database (Xaman wallet + session token)
+- [x] Game persistence: seeded map, destroyed blocks, coins, stage sync with server-side validation
+- [x] Shop: chest purchases with balance guard
+- [x] Inventory: chest opening hatches bombers onto the roster
+- [x] Wallet window: deposit info, withdrawal queue, transaction history
+- [x] Atomic database transactions for purchase / chest open / withdrawal
+- [x] Demo mode removed; Play/Shop/Inventory gated behind sign-in
+
+## Later
+- [ ] Payout worker that sends queued withdrawals on-chain (needs treasury wallet + secret)
+- [ ] Deposit detection (watch treasury address, credit by destination tag)
+- [ ] Marketplace (pure wallet-signed transactions)
+- [ ] Leaderboard content
+- [ ] XRPL module events
