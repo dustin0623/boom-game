@@ -104,7 +104,8 @@ export class TreasureScene extends Phaser.Scene {
       const s = saved[hero.id];
       hero.energy = s ? Math.min(hero.maxEnergy, Math.max(0, s.energy)) : hero.maxEnergy;
       hero.onMap = s ? s.onMap && hero.energy >= 1 : false;
-      hero.recoveryAt = s?.recoveryAt ?? Date.now();
+      // A hero saved while working starts resting only now, not from its old stamp.
+      hero.recoveryAt = s && !s.onMap ? s.recoveryAt : Date.now();
       hero.path = [];
       hero.target = null;
     }

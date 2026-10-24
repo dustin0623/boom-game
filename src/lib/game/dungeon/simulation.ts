@@ -238,6 +238,19 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     result.resolvedBombs.push(bomb.id);
     result.durable = true;
   }
+  // Working heroes never recover. Pin their rest clock to now, and recall any
+  // hero that can no longer afford a bomb straight off the map.
+  for (const hero of Object.values(state.heroes)) {
+    if (!hero.onMap) continue;
+    hero.recoveryAt = now;
+    const pending = Object.values(state.bombs).some((b) => b.heroId === hero.id);
+    if (hero.energy < 1 && !pending) {
+      hero.onMap = false;
+      hero.path = [];
+      hero.target = null;
+      result.durable = true;
+    }
+  }
   result.rewards.sort((a, b) => {
     const [ax = 0, ay = 0] = a.nodeKey.split(",").map(Number),
       [bx = 0, by = 0] = b.nodeKey.split(",").map(Number);

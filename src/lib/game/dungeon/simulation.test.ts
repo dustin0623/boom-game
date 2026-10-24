@@ -17,3 +17,24 @@ describe("demo simulation", () => {
     expect(bombed).toBe(true);
   });
 });
+
+describe("hero stamina", () => {
+  it("does not recover while working on the map", () => {
+    const s = createDemoState(0);
+    const hero = Object.values(s.heroes)[0]!;
+    hero.energy = 5;
+    hero.recoveryAt = 0;
+    s.bombs = {};
+    stepSimulation(s, 100, 60 * 60 * 1000);
+    expect(hero.energy).toBeLessThanOrEqual(5);
+    expect(hero.recoveryAt).toBe(60 * 60 * 1000);
+  });
+  it("recalls a hero immediately at 0 stamina", () => {
+    const s = createDemoState(0);
+    const hero = Object.values(s.heroes)[0]!;
+    hero.energy = 0;
+    s.bombs = {};
+    stepSimulation(s, 100, Date.now());
+    expect(hero.onMap).toBe(false);
+  });
+});
