@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
 import { useGameStore } from "@/features/stores/game.store";
 import { HERO_RARITY_DEFS, HeroRarity } from "@/game/data/HeroRarity";
-import { listInventory } from "@/lib/game/inventory/inventory.functions";
+import { listHeroes } from "@/lib/game/heroes/heroes.functions";
 import { mintHeroes } from "@/lib/game/heroes/heroes.functions";
 import { MAX_MINT_PER_TX, mintCost } from "@/lib/game/heroes/mint";
 import type { SessionHero } from "@/lib/game/session/types";
@@ -37,7 +37,7 @@ function Page() {
 
   const refresh = useCallback(() => {
     if (!player || !token) return;
-    listInventory({ data: { playerId: player.id, token } })
+    listHeroes({ data: { playerId: player.id, token } })
       .then((snap) => setCoins(snap.coins))
       .catch(() => setCoins(null));
   }, [player, token]);

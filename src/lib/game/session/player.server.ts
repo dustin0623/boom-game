@@ -38,9 +38,8 @@ export type StageMapRow = {
 };
 
 export function heroRowToSession(r: HeroRow): SessionHero {
-  return {
+  const hero: SessionHero = {
     id: r.id,
-    mintedNumber: r.minted_number ?? undefined,
     name: r.name,
     type: r.type,
     rarity: r.rarity,
@@ -54,6 +53,8 @@ export function heroRowToSession(r: HeroRow): SessionHero {
     onMap: r.on_map,
     recoveryAt: new Date(r.recovery_at).getTime(),
   };
+  if (r.minted_number != null) hero.mintedNumber = r.minted_number;
+  return hero;
 }
 
 export async function sha256(text: string): Promise<string> {
