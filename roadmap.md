@@ -21,3 +21,9 @@
 ## XRPL login
 - [x] Xaman (QR + deep link), Joey (WalletConnect), GemWallet
 - [ ] Add XAMAN_API_KEY / XAMAN_API_SECRET secrets and VITE_REOWN_PROJECT_ID (blocked: needs your developer accounts)
+
+## Chainframe layout + XRPL-only auth
+- [x] Chainframe theme, sidebar shell, landing page, page placeholders
+- [x] XRPL-only sign-in via Xaman QR / deep link (email and other wallets off)
+- [ ] Add XAMAN_API_KEY / XAMAN_API_SECRET (blocked: needs your Xaman developer account)
+- [ ] Build out Dashboard, Inventory, Shop, Marketplace, Leaderboard content

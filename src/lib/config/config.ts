@@ -8,16 +8,16 @@ export type ChainProvider = "solana" | "hive" | "xrpl";
 
 export const config = {
   app: {
-    name: "Game",
+    name: "Chainframe",
   },
   auth: {
     /** Email + password login enabled. */
-    email: true,
+    email: false,
     /**
      * At most ONE blockchain auth provider per app/account.
      * Supported: email only, email + chain, chain only (set email: false).
      */
-    chain: "hive" as ChainProvider | null,
+    chain: "xrpl" as ChainProvider | null,
     /** Challenge lifetime for wallet signatures. */
     challengeTtlMs: 5 * 60 * 1000,
   },
