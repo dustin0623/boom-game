@@ -152,6 +152,62 @@ export class TreasureScene extends Phaser.Scene {
       });
     }
   }
+  /** Remember blocks destroyed since the last confirmed server sync. */
+  private trackDestroyed(effects: GameEffect[]): void {
+    if (!this.demo) return;
+    for (const effect of effects) {
+      if (effect.type === "explosion")
+        for (const tile of effect.tiles) {
+          const key = `${tile.x},${tile.y}`;
+          if (this.demo.nodes[key]?.destroyed) this.pendingKeys.add(key);
+        }
+      else if (effect.type === "reward") this.pendingKeys.add(effect.nodeKey);
+    }
+  }
+
+  /** Flush destroyed blocks to the server every few seconds and reconcile. */
+  private tickSync(delta: number): void {
+    this.syncElapsed += delta;
+    if (this.syncElapsed < SYNC_INTERVAL_MS || this.syncing) return;
+    const syncer = useGameStore.getState().syncer;
+    const state = this.demo;
+    if (!syncer || !state || (!this.pendingKeys.size && !this.awaitingStage)) return;
+    this.syncElapsed = 0;
+    this.syncing = true;
+    const sent = [...this.pendingKeys];
+    useGameStore.getState().setSaveStatus("saving");
+    syncer(state.seed, sent)
+      .then((result) => {
+        for (const key of sent) this.pendingKeys.delete(key);
+        if (!this.demo) return;
+        this.demo.coins = result.coins;
+        if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
+          // Server advanced the stage (or we drifted): rebuild from its map.
+          this.awaitingStage = false;
+          this.demo = createSessionState({
+            playerId: this.demo.playerId,
+            coins: result.coins,
+            stage: result.stage,
+            seed: result.seed,
+            destroyedNodes: result.destroyedNodes,
+            heroes: this.session?.heroes ?? [],
+          });
+          this.apply(this.demo, []);
+        } else {
+          useGameStore.getState().setStats({
+            coins: result.coins,
+            stage: this.demo.stage,
+            heroesOnMap: Object.values(this.demo.heroes).filter((h) => h.onMap).length,
+          });
+        }
+        useGameStore.getState().setSaveStatus("saved");
+      })
+      .catch(() => useGameStore.getState().setSaveStatus("error"))
+      .finally(() => {
+        this.syncing = false;
+      });
+  }
+
   override update(_time: number, delta: number): void {
     // Clamp delta so a throttled background tab doesn't inject a multi-second
     // spike into the loop on the first frame back.
