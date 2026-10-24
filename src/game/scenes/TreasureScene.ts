@@ -87,6 +87,61 @@ export class TreasureScene extends Phaser.Scene {
       this.demo = null;
     });
   }
+  private heroStorageKey(): string | null {
+    return this.session ? `chainframe.heroes:${this.session.playerId}` : null;
+  }
+  /** New heroes start resting with full energy; known heroes resume their saved state. */
+  private restoreHeroes(): void {
+    const key = this.heroStorageKey();
+    if (!key || !this.demo) return;
+    let saved: Record<string, SavedHeroState> = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(key) ?? "{}");
+    } catch {
+      saved = {};
+    }
+    for (const hero of Object.values(this.demo.heroes)) {
+      const s = saved[hero.id];
+      hero.energy = s ? Math.min(hero.maxEnergy, Math.max(0, s.energy)) : hero.maxEnergy;
+      hero.onMap = s ? s.onMap && hero.energy >= 1 : false;
+      hero.recoveryAt = s?.recoveryAt ?? Date.now();
+      hero.path = [];
+      hero.target = null;
+    }
+    materializeRecovery(this.demo, Date.now());
+  }
+  private runCommands(): void {
+    if (!this.demo) return;
+    const store = useGameStore.getState();
+    for (const command of store.takeCommands()) {
+      const error = applyCommand(this.demo, command, Date.now());
+      if (error) store.setDeployError(DEPLOY_ERRORS[error] ?? "Could not update hero");
+    }
+  }
+  private lastPersist = 0;
+  private publishRoster(): void {
+    if (!this.demo || !this.session) return;
+    const heroes = Object.values(this.demo.heroes);
+    const byId = new Map(heroes.map((h) => [h.id, h]));
+    useGameStore.getState().setRoster(
+      this.session.heroes.map((h) => {
+        const live = byId.get(h.id);
+        return { ...h, energy: live?.energy ?? h.maxEnergy, onMap: live?.onMap ?? false };
+      }),
+    );
+    const now = Date.now();
+    if (now - this.lastPersist < 1000) return;
+    this.lastPersist = now;
+    const key = this.heroStorageKey();
+    if (!key) return;
+    const out: Record<string, SavedHeroState> = {};
+    for (const h of heroes) out[h.id] = { energy: h.energy, onMap: h.onMap, recoveryAt: h.recoveryAt };
+    try {
+      localStorage.setItem(key, JSON.stringify(out));
+    } catch {
+      /* storage full or blocked: state stays in memory */
+    }
+  }
   private clearEntities(): void {
     this.heroes.forEach((h) => h.destroy());
     this.heroes.clear();
@@ -302,6 +357,7 @@ export class TreasureScene extends Phaser.Scene {
         this.demo = result.state;
         if (this.session) this.trackDestroyed(result.effects);
         this.apply(result.state, result.effects);
+        if (this.session) this.publishRoster();
         // In session mode the server owns stage advancement: once every chest
         // is gone locally, stop the sim and wait for the server's new map.
         if (
