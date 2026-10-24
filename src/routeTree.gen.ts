@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as HeroesRouteImport } from './routes/heroes'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as PlayRouteImport } from './routes/play'
@@ -21,9 +21,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InventoryRoute = InventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
+const HeroesRoute = HeroesRouteImport.update({
+  id: '/heroes',
+  path: '/heroes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -49,7 +49,7 @@ const ShopRoute = ShopRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/inventory': typeof InventoryRoute
+  '/heroes': typeof HeroesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
   '/play': typeof PlayRoute
@@ -57,7 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/inventory': typeof InventoryRoute
+  '/heroes': typeof HeroesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
   '/play': typeof PlayRoute
@@ -66,7 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/inventory': typeof InventoryRoute
+  '/heroes': typeof HeroesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/marketplace': typeof MarketplaceRoute
   '/play': typeof PlayRoute
@@ -75,13 +75,13 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/inventory' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
+    '/' | '/heroes' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inventory' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
+  to: '/' | '/heroes' | '/leaderboard' | '/marketplace' | '/play' | '/shop'
   id:
     | '__root__'
     | '/'
-    | '/inventory'
+    | '/heroes'
     | '/leaderboard'
     | '/marketplace'
     | '/play'
@@ -90,7 +90,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  InventoryRoute: typeof InventoryRoute
+  HeroesRoute: typeof HeroesRoute
   LeaderboardRoute: typeof LeaderboardRoute
   MarketplaceRoute: typeof MarketplaceRoute
   PlayRoute: typeof PlayRoute
@@ -106,11 +106,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/inventory': {
-      id: '/inventory'
-      path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof InventoryRouteImport
+    '/heroes': {
+      id: '/heroes'
+      path: '/heroes'
+      fullPath: '/heroes'
+      preLoaderRoute: typeof HeroesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -146,7 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  InventoryRoute: InventoryRoute,
+  HeroesRoute: HeroesRoute,
   LeaderboardRoute: LeaderboardRoute,
   MarketplaceRoute: MarketplaceRoute,
   PlayRoute: PlayRoute,
