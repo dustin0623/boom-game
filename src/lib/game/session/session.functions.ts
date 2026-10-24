@@ -45,34 +45,33 @@ export const syncProgress = createServerFn({ method: "POST" })
     // Claims for an old map are ignored; the client resyncs to the current one.
     if (Number(row.seed) !== data.seed || !data.keys.length) return current(row, 0, data.keys.length);
 
-    const now = Date.now();
     const outcome = validateClaims({
       stage: row.stage,
       seed: Number(row.seed),
       destroyed: row.destroyed_nodes,
       claimed: data.keys,
-      elapsedMs: now - new Date(row.last_sync_at).getTime(),
+      elapsedMs: Date.now() - new Date(row.last_sync_at).getTime(),
     });
-    const update = outcome.cleared
-      ? { stage: row.stage + 1, seed: newSeed(), destroyed_nodes: [] as string[] }
-      : { destroyed_nodes: outcome.destroyed };
+    if (!outcome.accepted) return current(row, 0, outcome.rejected);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Guarded on last_sync_at so two overlapping syncs can never both credit.
-    const { data: saved } = await supabaseAdmin
-      .from("players")
-      .update({
-        ...update,
-        coins: Number(row.coins) + outcome.coins,
-        last_sync_at: new Date(now).toISOString(),
-        updated_at: new Date(now).toISOString(),
-      })
-      .eq("id", row.id)
-      .eq("last_sync_at", row.last_sync_at)
-      .select("*")
-      .maybeSingle();
-    if (!saved) {
-      const fresh = await loadPlayer(data.playerId, data.token);
-      return { ...current(fresh ?? row), ok: false };
-    }
-    return current(saved as PlayerRow, outcome.accepted, outcome.rejected);
+    // One atomic DB call: credits only keys not already saved, so retries and
+    // overlapping saves can never double-pay or lose progress.
+    const { data: saved, error } = await supabaseAdmin.rpc("save_progress", {
+      p_player_id: row.id,
+      p_seed: Number(row.seed),
+      p_rewards: outcome.rewards,
+      p_total_chests: 0,
+      p_new_seed: outcome.cleared ? newSeed() : 0,
+    });
+    if (error || !saved) throw new Error("Save failed");
+    const s = saved as { coins: number; stage: number; seed: number; destroyed: string[]; accepted: number };
+    return {
+      ok: true,
+      coins: Number(s.coins),
+      stage: s.stage,
+      seed: Number(s.seed),
+      destroyedNodes: s.destroyed,
+      accepted: s.accepted,
+      rejected: outcome.rejected,
+    };
   });
