@@ -1,29 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Boxes,
-  Flame,
-  Gamepad2,
-  LayoutDashboard,
-  Pickaxe,
-  ShoppingBag,
-  Sword,
-  Target,
-  Wallet,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { createFileRoute, Link, ClientOnly } from "@tanstack/react-router";
+import { Bomb, Coins, Gamepad2, Gem, HeartPulse, Pickaxe, QrCode, Wallet, type LucideIcon } from "lucide-react";
 import { ConnectWalletModal } from "@/components/auth/ConnectWalletModal";
 import { BrandLogo } from "@/components/brand/Brand";
+import { PhaserGame } from "@/components/game/PhaserGame";
+import { HeroSprite } from "@/components/game/HeroSprite";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
+
+const TITLE = "Chainframe — Drop bombs. Crack chests. Earn on XRPL.";
+const DESCRIPTION =
+  "A pixel bomber mining game on XRPL. Send your crew into the mine, blast blocks and open chests. Play the demo free or sign in with Xaman.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Chainframe — Build your rig. Mine. Raid. Trade." },
-      { name: "description", content: "Chainframe is an idle crypto-mining game on XRPL. Sign in with Xaman to start." },
-      { property: "og:title", content: "Chainframe — Build your rig. Mine. Raid. Trade." },
-      { property: "og:description", content: "Chainframe is an idle crypto-mining game on XRPL. Sign in with Xaman to start." },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -31,35 +25,58 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
+const ROSTER = [
+  { name: "Ricky", sprite: "ricky" },
+  { name: "Rocky", sprite: "rocky" },
+  { name: "Rascal", sprite: "rascal" },
+  { name: "Red Horn", sprite: "redhorn" },
+  { name: "Ducky", sprite: "ducky" },
+  { name: "Bolt", sprite: "bolt" },
+  { name: "Pinky", sprite: "pinky" },
+  { name: "Mossy", sprite: "mossy" },
+  { name: "Ghosty", sprite: "ghosty" },
+  { name: "Timmy", sprite: "timmy" },
+];
+
+const CHESTS = ["common", "uncommon", "rare", "epic", "legendary"];
+
 const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
-  { icon: Pickaxe, title: "Mine $HASH", description: "Your rig generates HASH passively. Upgrade hash rate and vault capacity to compound earnings over time." },
-  { icon: Zap, title: "Upgrade stats", description: "Spend HASH on permanent upgrades. Raise Hash Rate, Hack Power, Security and more to climb the leaderboards." },
-  { icon: Sword, title: "Raid other rigs", description: "Pick a target and attempt to steal vault HASH. Higher Exploit improves success chance; Firewall helps defend." },
-  { icon: Boxes, title: "Open chests", description: "Find gear drops that boost your rig. Chests contain items with rarities from Common to Legendary." },
-  { icon: ShoppingBag, title: "Trade on market", description: "List spare gear or shop for powerful items. The marketplace runs on the server with a small fee sink." },
-  { icon: Flame, title: "Build Notoriety", description: "Earn Notoriety through in-game activity to unlock Exploit bonuses, higher withdrawal limits and bragging rights." },
+  { icon: Bomb, title: "Bombers work for you", description: "Your crew walks the mine on its own, planting bombs next to blocks and chests." },
+  { icon: Gem, title: "Crack open chests", description: "Five chest tiers from Common to Legendary. Tougher chests pay out more coins." },
+  { icon: HeartPulse, title: "Manage stamina", description: "Each bomber has power, speed, stamina, bomb count and blast range. Rest them to recover." },
+  { icon: Pickaxe, title: "Clear stages", description: "Destroy every chest on the map to unlock the next stage with a fresh layout." },
 ];
 
 const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
-  { icon: Wallet, title: "Connect your wallet", description: "Open Xaman and scan the QR code to link your XRPL account." },
-  { icon: Target, title: "Approve the sign-in", description: "Confirm the sign-in request in Xaman. Your XRPL address identifies you in raids and marketplace history." },
-  { icon: Gamepad2, title: "Play idle or active", description: "Let your vault fill, upgrade stats, raid rivals and trade gear at your own pace." },
+  { icon: Gamepad2, title: "Try the demo", description: "Watch four bombers clear a real stage. No wallet, no sign-up." },
+  { icon: QrCode, title: "Scan with Xaman", description: "Connect your XRPL account by scanning a QR code. No private keys requested." },
+  { icon: Coins, title: "Build your crew", description: "Collect bombers, send them into the mine and stack coins." },
 ];
 
-function Cta({ label }: { label: string }) {
-  const connected = useAuthStore((s) => s.player !== null);
-  return connected ? (
-    <Button asChild size="lg" className="gap-2">
-      <Link to="/dashboard">
-        <LayoutDashboard className="size-4" />
-        {label}
+function PlayDemoButton({ size = "lg" }: { size?: "lg" | "default" }) {
+  return (
+    <Button asChild size={size} className="gap-2">
+      <Link to="/play">
+        <Gamepad2 className="size-4" /> Play demo
       </Link>
     </Button>
-  ) : (
+  );
+}
+
+function WalletButton() {
+  const connected = useAuthStore((s) => s.player !== null);
+  if (connected)
+    return (
+      <Button asChild size="lg" variant="outline" className="gap-2">
+        <Link to="/play">
+          <Gamepad2 className="size-4" /> Enter the mine
+        </Link>
+      </Button>
+    );
+  return (
     <ConnectWalletModal>
-      <Button size="lg" className="gap-2">
-        <Wallet className="size-4" />
-        Connect wallet
+      <Button size="lg" variant="outline" className="gap-2">
+        <Wallet className="size-4" /> Connect wallet
       </Button>
     </ConnectWalletModal>
   );
@@ -67,36 +84,56 @@ function Cta({ label }: { label: string }) {
 
 function LandingPage() {
   return (
-    <div className="space-y-16 pb-12 pt-4 md:pt-8">
-      <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-background p-6 md:p-10 lg:p-14">
-        <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-primary/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full bg-accent/15 blur-3xl" />
-        <div className="relative">
-          <BrandLogo className="mb-5 h-14 md:h-20 lg:h-24" />
+    <div className="space-y-16 pb-12 pt-2 md:pt-4">
+      <section className="relative overflow-hidden rounded-2xl border border-primary/25">
+        <div className="pointer-events-none absolute inset-0 opacity-60">
+          <ClientOnly fallback={null}>
+            <PhaserGame className="h-full w-full [&_canvas]:!h-full [&_canvas]:!w-full [&_canvas]:object-cover" />
+          </ClientOnly>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
+        <div className="relative p-6 md:p-10 lg:p-14">
+          <BrandLogo className="mb-5 h-14 md:h-20" />
           <h1 className="max-w-2xl text-3xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-            Build your rig. Mine. Raid. Trade.
+            Drop bombs. Crack chests. Earn on XRPL.
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-            Chainframe is an idle crypto-mining game where your rig works around the clock. Upgrade stats, open
-            chests, raid other miners and trade gear on the marketplace.
+            A pixel bomber mining game. Your crew roams the mine, blasts through blocks and breaks open treasure
+            chests while you plan the next move.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Cta label="Enter dashboard" />
+            <PlayDemoButton />
+            <WalletButton />
           </div>
         </div>
       </section>
 
       <section className="space-y-5">
         <div>
-          <h2 className="text-lg font-semibold md:text-xl">What you can do</h2>
-          <p className="text-xs text-muted-foreground md:text-sm">A mix of idle progression and active strategy.</p>
+          <h2 className="text-lg font-semibold md:text-xl">Meet the crew</h2>
+          <p className="text-xs text-muted-foreground md:text-sm">Ten bombers, each in five rarities.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
+        <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
+          {ROSTER.map((h) => (
             <div
-              key={f.title}
-              className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-sm transition hover:border-primary/30 hover:bg-card"
+              key={h.sprite}
+              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card/60 p-3 transition hover:-translate-y-0.5 hover:border-primary/40"
             >
+              <HeroSprite sprite={h.sprite} scale={3} />
+              <span className="text-[11px] text-muted-foreground">{h.name}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-lg font-semibold md:text-xl">How the mine works</h2>
+          <p className="text-xs text-muted-foreground md:text-sm">Idle progress with real strategy.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="rounded-xl border border-border bg-card/60 p-5 transition hover:border-primary/30 hover:bg-card">
               <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <f.icon className="size-5" />
               </div>
@@ -105,19 +142,27 @@ function LandingPage() {
             </div>
           ))}
         </div>
+        <div className="flex flex-wrap items-end justify-center gap-6 rounded-xl border border-border bg-card/40 p-5">
+          {CHESTS.map((c) => (
+            <div key={c} className="flex flex-col items-center gap-2">
+              <img
+                src={`/game/items/chests/chest_${c}.png`}
+                alt={`${c} chest`}
+                className="h-12 w-auto"
+                style={{ imageRendering: "pixelated" }}
+              />
+              <span className="text-[11px] capitalize text-muted-foreground">{c}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold md:text-xl">How it works</h2>
-          <p className="text-xs text-muted-foreground md:text-sm">Get started in three simple steps.</p>
-        </div>
+        <h2 className="text-lg font-semibold md:text-xl">Get started</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {STEPS.map((s, i) => (
-            <div key={s.title} className="relative rounded-xl border border-border bg-card/60 p-5 backdrop-blur-sm">
-              <span className="absolute right-4 top-4 font-mono text-2xl font-bold text-muted-foreground/30">
-                0{i + 1}
-              </span>
+            <div key={s.title} className="relative rounded-xl border border-border bg-card/60 p-5">
+              <span className="absolute right-4 top-4 font-mono text-2xl font-bold text-muted-foreground/30">0{i + 1}</span>
               <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <s.icon className="size-5" />
               </div>
@@ -129,10 +174,11 @@ function LandingPage() {
       </section>
 
       <section className="flex flex-col items-center rounded-2xl border border-primary/20 bg-primary/5 p-8 text-center md:p-12">
-        <h2 className="text-xl font-semibold md:text-2xl">Ready to enter the mine?</h2>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">Join Chainframe and start building your rig today.</p>
-        <div className="mt-6">
-          <Cta label="Go to dashboard" />
+        <h2 className="text-xl font-semibold md:text-2xl">Ready to light the fuse?</h2>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">Jump into the demo now, connect your wallet whenever you're ready.</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <PlayDemoButton />
+          <WalletButton />
         </div>
       </section>
     </div>

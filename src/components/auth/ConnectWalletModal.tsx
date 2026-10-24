@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Loader2, QrCode, Smartphone } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Gamepad2, Loader2, QrCode, Smartphone } from "lucide-react";
 import { walletLogin, type XrplQrPrompt } from "@/lib/chains/providers";
 import { useAuthStore } from "@/features/stores/auth.store";
 import { BrandLogo } from "@/components/brand/Brand";
@@ -75,6 +76,15 @@ export function ConnectWalletModal({ children }: { children: ReactNode }) {
             {busy ? "Preparing QR…" : "Sign in with Xaman"}
           </Button>
         )}
+
+        <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+          <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+        </div>
+        <Button asChild variant="outline" size="lg" className="w-full gap-2">
+          <Link to="/play" onClick={() => setOpen(false)}>
+            <Gamepad2 className="size-4" /> Play demo — no wallet needed
+          </Link>
+        </Button>
 
         {error && <p className="text-center text-sm text-destructive">{error}</p>}
         <p className="text-center text-[11px] text-muted-foreground">
