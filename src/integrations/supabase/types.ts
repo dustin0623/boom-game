@@ -222,12 +222,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      mint_heroes: {
+        Args: { p_cost: number; p_heroes: Json; p_player_id: string }
+        Returns: Json
+      }
       open_chest: {
         Args: { p_hero: Json; p_item_id: string; p_player_id: string }
         Returns: Json
       }
       request_withdrawal: {
         Args: { p_address: string; p_amount: number; p_player_id: string }
+        Returns: Json
+      }
+      save_progress: {
+        Args: {
+          p_new_seed: number
+          p_player_id: string
+          p_rewards: Json
+          p_seed: number
+          p_total_chests: number
+        }
         Returns: Json
       }
     }
