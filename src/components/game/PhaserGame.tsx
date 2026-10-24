@@ -23,7 +23,7 @@ export function PhaserGame({ className, muted = false }: { className?: string; m
         scene: [BootScene, TreasureScene],
         scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
         render: { pixelArt: true, antialias: false },
-        audio: muted ? { noAudio: true } : undefined,
+        audio: { noAudio: muted },
         banner: false,
       });
     })();
