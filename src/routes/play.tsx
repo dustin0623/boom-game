@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
-import { CloudCheck, CloudOff, Coins, Layers, Loader2, Pause, Trophy, Users } from "lucide-react";
+import { CloudCheck, CloudOff, Layers, Loader2, Pause, Trophy } from "lucide-react";
 import { PhaserGame } from "@/components/game/PhaserGame";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { HeroesDrawer } from "@/components/game/HeroesDrawer";
@@ -24,15 +24,6 @@ export const Route = createFileRoute("/play")({
   component: PlayPage,
 });
 
-function Stat({ icon: Icon, label, value }: { icon: typeof Coins; label: string; value: string | number }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-2">
-      <Icon className="size-4 text-primary" />
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="ml-auto font-mono text-sm font-semibold tabular-nums">{value}</span>
-    </div>
-  );
-}
 
 const SAVE_LABEL: Record<SaveStatus, string> = {
   local: "Not connected",
@@ -61,8 +52,7 @@ function PlayPage() {
   const player = useAuthStore((s) => s.player);
   const token = useAuthStore((s) => s.token);
   const gamePaused = useGameStore((s) => s.gamePaused);
-  const { coins, stage, heroesOnMap, session, setSession, setSaveStatus, stageClearing, saveStatus } =
-    useGameStore();
+  const { stage, session, setSession, setSaveStatus, stageClearing, saveStatus } = useGameStore();
 
   useEffect(() => {
     if (!player || !token || session?.playerId === player.id) return;
@@ -88,15 +78,15 @@ function PlayPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <PageHeader title="Play" description="Deploy your heroes from the Heroes panel to clear the mine." />
-        <div className="flex items-center gap-3 pt-1">
-          <SaveIndicator />
-          {session && <HeroesDrawer />}
+        <div className="flex flex-col items-end gap-2 pt-1">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-card/70 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-wider text-primary">
+            <Layers className="size-3.5" /> Stage {stage}
+          </span>
+          <div className="flex items-center gap-3">
+            <SaveIndicator />
+            {session && <HeroesDrawer />}
+          </div>
         </div>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Stat icon={Coins} label="Coins" value={coins.toLocaleString()} />
-        <Stat icon={Layers} label="Stage" value={stage} />
-        <Stat icon={Users} label="Bombers" value={heroesOnMap} />
       </div>
       <div className="relative overflow-hidden rounded-xl border border-primary/25 bg-card shadow-[0_0_40px_-12px_var(--primary)]">
         <ClientOnly fallback={<div className="aspect-[41/25] w-full animate-pulse bg-muted" />}>
