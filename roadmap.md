@@ -29,7 +29,7 @@
 
 - [x] Stage transition: confirmed next stage stays after leaving/returning to Play
 - [x] Boxed-in heroes on fresh maps still bomb instead of freezing
-- [ ] Fix and regression-test the stage-clear handoff so the new map resumes without refresh
+- [x] Fix and regression-test the stage-clear handoff so the new map resumes without refresh
 
 ## Later
 - [ ] Payout worker that sends queued withdrawals on-chain (needs treasury wallet + secret)

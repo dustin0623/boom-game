@@ -37,7 +37,7 @@ describe("confirmed stage handoff", () => {
     };
     const live = createSessionState(session);
     applyCommand(live, { type: "deploy", heroId: "hero" }, Date.now());
-    const worker = live.heroes.hero;
+    const worker = live.heroes["hero"];
     if (!worker) throw new Error("Missing test hero");
     worker.energy = 40;
     for (const node of Object.values(live.nodes)) { node.destroyed = true; node.hp = 0; }
@@ -65,7 +65,7 @@ describe("confirmed stage handoff", () => {
     expect(harness.live.stage).toBe(2);
     expect(harness.awaitingStage).toBe(false);
     expect(harness.session.stage).toBe(2);
-    const nextWorker = harness.live.heroes.hero;
+    const nextWorker = harness.live.heroes["hero"];
     if (!nextWorker) throw new Error("Missing next-stage hero");
     expect(nextWorker.energy).toBe(40);
     expect(nextWorker.onMap).toBe(true);
