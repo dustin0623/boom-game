@@ -9,7 +9,7 @@ import { useAuthStore } from "@/features/stores/auth.store";
 
 const TITLE = "Chainframe — Drop bombs. Crack chests. Earn on XRPL.";
 const DESCRIPTION =
-  "A pixel bomber mining game on XRPL. Send your crew into the mine, blast blocks and open chests. Play the demo free or sign in with Xaman.";
+  "A pixel bomber mining game on XRPL. Send your crew into the mine, blast blocks and open chests. Sign in with Xaman to start mining.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,16 +48,16 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
 ];
 
 const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
-  { icon: Gamepad2, title: "Try the demo", description: "Watch four bombers clear a real stage. No wallet, no sign-up." },
   { icon: QrCode, title: "Scan with Xaman", description: "Connect your XRPL account by scanning a QR code. No private keys requested." },
-  { icon: Coins, title: "Build your crew", description: "Collect bombers, send them into the mine and stack coins." },
+  { icon: Gamepad2, title: "Enter the mine", description: "Your bombers get to work right away and keep clearing blocks while you watch." },
+  { icon: Coins, title: "Build your crew", description: "Collect bombers, open chests and stack coins that are saved to your account." },
 ];
 
-function PlayDemoButton({ size = "lg" }: { size?: "lg" | "default" }) {
+function EnterMineButton({ size = "lg" }: { size?: "lg" | "default" }) {
   return (
     <Button asChild size={size} className="gap-2">
       <Link to="/play">
-        <Gamepad2 className="size-4" /> Play demo
+        <Gamepad2 className="size-4" /> Enter the mine
       </Link>
     </Button>
   );
@@ -102,7 +102,7 @@ function LandingPage() {
             chests while you plan the next move.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <PlayDemoButton />
+            <EnterMineButton />
             <WalletButton />
           </div>
         </div>
@@ -175,9 +175,9 @@ function LandingPage() {
 
       <section className="flex flex-col items-center rounded-2xl border border-primary/20 bg-primary/5 p-8 text-center md:p-12">
         <h2 className="text-xl font-semibold md:text-2xl">Ready to light the fuse?</h2>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">Jump into the demo now, connect your wallet whenever you're ready.</p>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">Connect your wallet with Xaman and your crew starts mining right away.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <PlayDemoButton />
+          <EnterMineButton />
           <WalletButton />
         </div>
       </section>
