@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { HeroCard } from "@/components/game/HeroCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/features/stores/auth.store";
-import { listInventory, type InventorySnapshot } from "@/lib/game/inventory/inventory.functions";
+import { listHeroes, type HeroesSnapshot } from "@/lib/game/heroes/heroes.functions";
 
 export const Route = createFileRoute("/heroes")({
   head: () => ({
@@ -23,11 +23,11 @@ export const Route = createFileRoute("/heroes")({
 function Page() {
   const player = useAuthStore((s) => s.player);
   const token = useAuthStore((s) => s.token);
-  const [snapshot, setSnapshot] = useState<InventorySnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<HeroesSnapshot | null>(null);
 
   useEffect(() => {
     if (!player || !token) return;
-    listInventory({ data: { playerId: player.id, token } })
+    listHeroes({ data: { playerId: player.id, token } })
       .then(setSnapshot)
       .catch(() => setSnapshot(null));
   }, [player, token]);

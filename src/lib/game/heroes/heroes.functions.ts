@@ -88,7 +88,7 @@ export const saveHeroesState = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.rpc("save_heroes_state", {
       p_player_id: row.id,
-      p_heroes: data.heroes,
+      p_heroes: data.heroes as never,
     });
     if (error) throw new Error("Could not save hero state");
     return { ok: true };
