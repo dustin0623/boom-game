@@ -220,6 +220,22 @@ export function SidebarNav({
           );
         })}
       </nav>
+
+      <div className="mt-auto px-3 py-3">
+        <AboutModal>
+          <button
+            type="button"
+            aria-label="About"
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20",
+              collapsed && "justify-center px-0",
+            )}
+          >
+            <Info className="size-3.5 shrink-0" />
+            {!collapsed && <span>About</span>}
+          </button>
+        </AboutModal>
+      </div>
     </div>
   );
 }
