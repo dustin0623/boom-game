@@ -6,7 +6,20 @@ import { TILE_SIZE } from "@/game/data/TileTypes";
 import { HeroRarity, HeroType } from "@/game/data/HeroRarity";
 import { useGameStore } from "@/features/stores/game.store";
 import type { GameEffect, GameState } from "@/lib/game/dungeon/types";
-import { stepSimulation } from "@/lib/game/dungeon/simulation";
+import { applyCommand, stepSimulation } from "@/lib/game/dungeon/simulation";
+import { materializeRecovery } from "@/lib/game/dungeon/rules";
+
+const DEPLOY_ERRORS: Record<string, string> = {
+  INSUFFICIENT_ENERGY: "Needs at least 50% energy to deploy",
+  MAP_FULL: "The map is full — recall a hero first",
+  HERO_UNAVAILABLE: "That hero is not available",
+};
+
+interface SavedHeroState {
+  energy: number;
+  onMap: boolean;
+  recoveryAt: number;
+}
 import { STATIC_ANIMS } from "../engine/config/AnimationConfig";
 import { GAME_CONFIG } from "../engine/config/GameConfig";
 import { createDemoState, createSessionState } from "../demo/demo";
@@ -46,7 +59,10 @@ export class TreasureScene extends Phaser.Scene {
     this.awaitingStage = false;
     this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
-    if (this.session) useGameStore.getState().setSaveStatus("saved");
+    if (this.session) {
+      this.restoreHeroes();
+      useGameStore.getState().setSaveStatus("saved");
+    }
     this.restorePending();
     this.apply(this.demo, []);
     // Save immediately when the player leaves the tab or page.
@@ -70,6 +86,61 @@ export class TreasureScene extends Phaser.Scene {
       this.clearEntities();
       this.demo = null;
     });
+  }
+  private heroStorageKey(): string | null {
+    return this.session ? `chainframe.heroes:${this.session.playerId}` : null;
+  }
+  /** New heroes start resting with full energy; known heroes resume their saved state. */
+  private restoreHeroes(): void {
+    const key = this.heroStorageKey();
+    if (!key || !this.demo) return;
+    let saved: Record<string, SavedHeroState> = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(key) ?? "{}");
+    } catch {
+      saved = {};
+    }
+    for (const hero of Object.values(this.demo.heroes)) {
+      const s = saved[hero.id];
+      hero.energy = s ? Math.min(hero.maxEnergy, Math.max(0, s.energy)) : hero.maxEnergy;
+      hero.onMap = s ? s.onMap && hero.energy >= 1 : false;
+      hero.recoveryAt = s?.recoveryAt ?? Date.now();
+      hero.path = [];
+      hero.target = null;
+    }
+    materializeRecovery(this.demo, Date.now());
+  }
+  private runCommands(): void {
+    if (!this.demo) return;
+    const store = useGameStore.getState();
+    for (const command of store.takeCommands()) {
+      const error = applyCommand(this.demo, command, Date.now());
+      if (error) store.setDeployError(DEPLOY_ERRORS[error] ?? "Could not update hero");
+    }
+  }
+  private lastPersist = 0;
+  private publishRoster(): void {
+    if (!this.demo || !this.session) return;
+    const heroes = Object.values(this.demo.heroes);
+    const byId = new Map(heroes.map((h) => [h.id, h]));
+    useGameStore.getState().setRoster(
+      this.session.heroes.map((h) => {
+        const live = byId.get(h.id);
+        return { ...h, energy: live?.energy ?? h.maxEnergy, onMap: live?.onMap ?? false };
+      }),
+    );
+    const now = Date.now();
+    if (now - this.lastPersist < 1000) return;
+    this.lastPersist = now;
+    const key = this.heroStorageKey();
+    if (!key) return;
+    const out: Record<string, SavedHeroState> = {};
+    for (const h of heroes) out[h.id] = { energy: h.energy, onMap: h.onMap, recoveryAt: h.recoveryAt };
+    try {
+      localStorage.setItem(key, JSON.stringify(out));
+    } catch {
+      /* storage full or blocked: state stays in memory */
+    }
   }
   private clearEntities(): void {
     this.heroes.forEach((h) => h.destroy());
@@ -239,6 +310,7 @@ export class TreasureScene extends Phaser.Scene {
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
           // Server advanced the stage (or we drifted): rebuild from its map.
           this.awaitingStage = false;
+          const previous = this.demo.heroes;
           this.demo = createSessionState({
             playerId: this.demo.playerId,
             coins: result.coins,
@@ -247,6 +319,14 @@ export class TreasureScene extends Phaser.Scene {
             destroyedNodes: result.destroyedNodes,
             heroes: this.session?.heroes ?? [],
           });
+          // Keep each hero's energy and deploy state across the new map.
+          for (const hero of Object.values(this.demo.heroes)) {
+            const old = previous[hero.id];
+            if (!old) continue;
+            hero.energy = old.energy;
+            hero.onMap = old.onMap;
+            hero.recoveryAt = old.recoveryAt;
+          }
           this.apply(this.demo, []);
         } else {
           useGameStore.getState().setStats({
@@ -271,15 +351,22 @@ export class TreasureScene extends Phaser.Scene {
       this.demoElapsed += delta;
       if (this.demoElapsed >= TICK_MS && !this.awaitingStage) {
         this.demoElapsed = 0;
-        for (const hero of Object.values(this.demo.heroes)) {
-          hero.energy = hero.maxEnergy;
-          hero.onMap = true;
+        if (this.session) {
+          this.runCommands();
+          materializeRecovery(this.demo, Date.now());
+        } else {
+          // Homepage backdrop: heroes never tire.
+          for (const hero of Object.values(this.demo.heroes)) {
+            hero.energy = hero.maxEnergy;
+            hero.onMap = true;
+          }
         }
         this.demo.daily.used = 0;
         const result = stepSimulation(this.demo, TICK_MS, Date.now());
         this.demo = result.state;
         if (this.session) this.trackDestroyed(result.effects);
         this.apply(result.state, result.effects);
+        if (this.session) this.publishRoster();
         // In session mode the server owns stage advancement: once every chest
         // is gone locally, stop the sim and wait for the server's new map.
         if (

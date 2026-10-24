@@ -4,6 +4,7 @@ import { ClientOnly } from "@tanstack/react-router";
 import { CloudCheck, CloudOff, Coins, Layers, Loader2, Users } from "lucide-react";
 import { PhaserGame } from "@/components/game/PhaserGame";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { HeroesDrawer } from "@/components/game/HeroesDrawer";
 import { useAuthStore } from "@/features/stores/auth.store";
 import { useGameStore, type SaveStatus } from "@/features/stores/game.store";
 import { loadGameSession, syncProgress } from "@/lib/game/session/session.functions";
@@ -80,9 +81,10 @@ function PlayPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <PageHeader title="Play" description="Your bombers are clearing the mine." />
-        <div className="pt-1">
+        <PageHeader title="Play" description="Deploy your heroes from the Heroes panel to clear the mine." />
+        <div className="flex items-center gap-3 pt-1">
           <SaveIndicator />
+          {session && <HeroesDrawer />}
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
