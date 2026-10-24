@@ -27,6 +27,8 @@ import type { PlayerSession } from "@/lib/game/session/types";
 
 const TICK_MS = 100;
 const SYNC_INTERVAL_MS = 4000;
+/** How long the board stays frozen on "Stage cleared" while the server confirms. */
+const STAGE_CLEAR_PAUSE_MS = 1600;
 
 /**
  * Renders the local simulation. With a cloud session in the game store the
@@ -47,6 +49,7 @@ export class TreasureScene extends Phaser.Scene {
   private syncElapsed = 0;
   private syncing = false;
   private awaitingStage = false;
+  private stageHoldUntil = 0;
   constructor() {
     super("TreasureScene");
   }
@@ -57,6 +60,7 @@ export class TreasureScene extends Phaser.Scene {
     this.syncElapsed = 0;
     this.syncing = false;
     this.awaitingStage = false;
+    this.stageHoldUntil = 0;
     this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
     if (this.session) {
@@ -335,26 +339,37 @@ export class TreasureScene extends Phaser.Scene {
         if (!this.demo) return;
         this.demo.coins = result.coins;
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
-          // Server advanced the stage (or we drifted): rebuild from its map.
+          // Server confirmed the stage (or we drifted): hold the board frozen
+          // briefly so the player sees the verification, then rebuild from the
+          // server's official map. The pending list belongs to the old seed.
           this.awaitingStage = false;
+          this.pendingKeys.clear();
+          this.persistPending();
           const previous = this.demo.heroes;
-          this.demo = createSessionState({
-            playerId: this.demo.playerId,
-            coins: result.coins,
-            stage: result.stage,
-            seed: result.seed,
-            destroyedNodes: result.destroyedNodes,
-            heroes: this.session?.heroes ?? [],
+          const playerId = this.demo.playerId;
+          this.stageHoldUntil = this.time.now + STAGE_CLEAR_PAUSE_MS;
+          this.time.delayedCall(STAGE_CLEAR_PAUSE_MS, () => {
+            if (!this.session || !this.scene.isActive()) return;
+            this.demo = createSessionState({
+              playerId,
+              coins: result.coins,
+              stage: result.stage,
+              seed: result.seed,
+              destroyedNodes: result.destroyedNodes,
+              heroes: this.session.heroes,
+            });
+            // Keep each hero's energy and deploy state across the new map.
+            for (const hero of Object.values(this.demo.heroes)) {
+              const old = previous[hero.id];
+              if (!old) continue;
+              hero.energy = old.energy;
+              hero.onMap = old.onMap;
+              hero.recoveryAt = old.recoveryAt;
+            }
+            this.stageHoldUntil = 0;
+            this.apply(this.demo, []);
+            useGameStore.getState().setStageClearing(false);
           });
-          // Keep each hero's energy and deploy state across the new map.
-          for (const hero of Object.values(this.demo.heroes)) {
-            const old = previous[hero.id];
-            if (!old) continue;
-            hero.energy = old.energy;
-            hero.onMap = old.onMap;
-            hero.recoveryAt = old.recoveryAt;
-          }
-          this.apply(this.demo, []);
         } else {
           useGameStore.getState().setStats({
             coins: result.coins,
@@ -376,7 +391,7 @@ export class TreasureScene extends Phaser.Scene {
     delta = Math.min(delta, 250);
     if (this.demo) {
       this.demoElapsed += delta;
-      if (this.demoElapsed >= TICK_MS && !this.awaitingStage) {
+      if (this.demoElapsed >= TICK_MS && !this.awaitingStage && this.time.now >= this.stageHoldUntil) {
         this.demoElapsed = 0;
         if (this.session) {
           this.adoptNewHeroes();
@@ -396,12 +411,17 @@ export class TreasureScene extends Phaser.Scene {
         this.apply(result.state, result.effects);
         if (this.session) this.publishRoster();
         // In session mode the server owns stage advancement: once every chest
-        // is gone locally, stop the sim and wait for the server's new map.
+        // is gone locally, freeze the board, verify + save right away, and wait
+        // for the server's official next map before resuming.
         if (
           this.session &&
+          !this.awaitingStage &&
           !Object.values(this.demo.nodes).some((n) => n.kind === "chest" && !n.destroyed)
-        )
+        ) {
           this.awaitingStage = true;
+          this.syncElapsed = SYNC_INTERVAL_MS;
+          useGameStore.getState().setStageClearing(true);
+        }
       }
       if (this.session) this.tickSync(delta);
     }
