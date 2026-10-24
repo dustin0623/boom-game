@@ -1443,3 +1443,8 @@ Preserve the architecture unless the user explicitly requests an architectural c
 - Smart-contract worker is unified: server/smart-contract/processor routes `chain:action` to handlers; in mock mode the app runs one poll cycle every few seconds via a dev-only hook calling runTransactionBatch, in live mode a separate worker process runs the same poller (why: one code path, no mock/live duplication).
 
 - Layout: src/components/layout/AppShell wraps every route from __root; pages outside PUBLIC_PAGE_PATHS show ConnectGate until signed in (why: one auth gate, matches the Chainframe reference).
+
+# Game runtime
+- Phaser world lives in src/game (scenes, entities, systems, engine/config, demo); pure simulation/map rules in src/lib/game/dungeon; static hero/chest/tile data in src/game/data; assets under public/game. src/components/game/PhaserGame mounts Phaser via dynamic import inside useEffect behind ClientOnly (why: Phaser touches window at import and must never run during SSR).
+- React ↔ Phaser share runtime stats only through the Zustand game store in src/features/stores/game.store.ts (why: one bridge, scenes never import React).
+- /play is public and runs a local, unsaved demo simulation until the backend exists (why: guests can try the game before connecting a wallet).
