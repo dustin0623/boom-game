@@ -3,22 +3,22 @@ import { MapManager } from "../systems/MapManager";
 import { Hero } from "../entities/Hero";
 import { Bomb } from "../entities/Bomb";
 import { TILE_SIZE } from "@/game/data/TileTypes";
-import { HeroRarity, HeroType, HERO_RARITY_DEFS } from "@/game/data/HeroRarity";
-import { useGameStore } from "@/features/store/gameStore";
-import { subscribeGame } from "@/context/SocketContext";
+import { HeroRarity, HeroType } from "@/game/data/HeroRarity";
+import { useGameStore } from "@/features/stores/game.store";
 import type { GameEffect, GameState } from "@/lib/game/dungeon/types";
 import { stepSimulation } from "@/lib/game/dungeon/simulation";
 import { STATIC_ANIMS } from "../engine/config/AnimationConfig";
 import { GAME_CONFIG } from "../engine/config/GameConfig";
-import { createDemo } from "../demo/demo";
+import { createDemoState } from "../demo/demo";
 
-/** Real gameplay is rendered from the service. Only the isolated demo runs locally. */
+const TICK_MS = 100;
+
+/** Renders the local demo simulation. Live play will feed state from the backend later. */
 export class TreasureScene extends Phaser.Scene {
   private map!: MapManager;
   private state: GameState | null = null;
   private heroes = new Map<string, Hero>();
   private bombs = new Map<string, Bomb>();
-  private unsubscribe?: () => void;
   private mapId = "";
   private demo: GameState | null = null;
   private demoElapsed = 0;
@@ -28,21 +28,12 @@ export class TreasureScene extends Phaser.Scene {
   }
   create(): void {
     this.map = new MapManager(this);
-    this.unsubscribe = subscribeGame((state, effects) => {
-      if (!Object.keys(state.heroes).length) {
-        if (!this.demo) this.demo = createDemo(state);
-        useGameStore.getState().setDemoMode(true);
-        return;
-      }
-      this.demo = null;
-      useGameStore.getState().setDemoMode(false);
-      this.apply(state, effects);
-    });
+    this.demo = createDemoState();
+    useGameStore.getState().reset();
+    this.apply(this.demo, []);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.unsubscribe?.();
       this.clearEntities();
       this.demo = null;
-      useGameStore.getState().setDemoMode(false);
     });
   }
   private clearEntities(): void {
@@ -54,13 +45,8 @@ export class TreasureScene extends Phaser.Scene {
   private apply(state: GameState, effects: GameEffect[]): void {
     const nodesChanged = this.state?.nodes !== state.nodes || state.mapId !== this.mapId;
     if (state.mapId !== this.mapId) {
-      const advanced = this.mapId !== "" && this.state !== null && state.stage > this.state.stage;
       this.clearEntities();
       this.mapId = state.mapId;
-      if (advanced && !this.demo) {
-        useGameStore.getState().setStageValidated(true);
-        this.time.delayedCall(1800, () => useGameStore.getState().setStageValidated(false));
-      }
     }
     this.state = state;
     this.receivedAt = this.time.now;
@@ -99,32 +85,15 @@ export class TreasureScene extends Phaser.Scene {
         this.bombs.delete(id);
       }
     for (const b of Object.values(state.bombs)) {
-      if (!this.bombs.has(b.id))
-        this.bombs.set(b.id, new Bomb(this, b.x, b.y));
+      if (!this.bombs.has(b.id)) this.bombs.set(b.id, new Bomb(this, b.x, b.y));
       this.bombs.get(b.id)!.detonateAt = b.dueAt;
     }
     for (const effect of effects) this.effect(effect, state);
-    if (!this.demo)
-      useGameStore.getState().setMapHeroes(
-        Object.values(state.heroes)
-          .filter((h) => h.onMap)
-          .map((h) => ({
-            id: h.id,
-            tileX: h.x,
-            tileY: h.y,
-            state: h.phase,
-            type: h.type,
-            rarity: h.rarity,
-            rarityLabel: HERO_RARITY_DEFS[h.rarity as HeroRarity]?.label ?? h.rarity,
-            power: h.power,
-            speed: h.speed,
-            stamina: h.stamina,
-            bombNum: h.bombNumber,
-            bombRange: h.bombRange,
-            energy: h.maxEnergy,
-            currentEnergy: h.energy,
-          })),
-      );
+    useGameStore.getState().setStats({
+      coins: state.coins,
+      stage: state.stage,
+      heroesOnMap: Object.values(state.heroes).filter((h) => h.onMap).length,
+    });
   }
   private effect(effect: GameEffect, state: GameState): void {
     if (effect.type === "explosion") {
@@ -163,17 +132,18 @@ export class TreasureScene extends Phaser.Scene {
     }
   }
   update(_time: number, delta: number): void {
-    const store = useGameStore.getState();
-    if (store.connectionLost || store.sessionError || store.gamePaused) return;
+    if (useGameStore.getState().paused) return;
     if (this.demo) {
       this.demoElapsed += delta;
-      if (this.demoElapsed >= 100) {
+      if (this.demoElapsed >= TICK_MS) {
         this.demoElapsed = 0;
         for (const hero of Object.values(this.demo.heroes)) {
           hero.energy = hero.maxEnergy;
           hero.onMap = true;
         }
-        const result = stepSimulation(this.demo, 100, Date.now());
+        this.demo.daily.used = 0;
+        const result = stepSimulation(this.demo, TICK_MS, Date.now());
+        this.demo = result.state;
         this.apply(result.state, result.effects);
       }
     }
@@ -181,19 +151,18 @@ export class TreasureScene extends Phaser.Scene {
     for (const h of Object.values(this.state.heroes)) {
       const sprite = this.heroes.get(h.id);
       if (!sprite) continue;
-      const tx = (h.x + 0.5) * TILE_SIZE,
-        ty = (h.y + 0.5) * TILE_SIZE;
-      const dx = tx - sprite.x,
-        dy = ty - sprite.y;
-      const distance = Math.hypot(dx, dy);
+      const tx = (h.x + 0.5) * TILE_SIZE;
+      const ty = (h.y + 0.5) * TILE_SIZE;
+      const dx = tx - sprite.x;
+      const dy = ty - sprite.y;
       const blend = Math.min(1, delta / 80);
       sprite.setFacingFromDelta(dx, dy);
-      sprite.setMoving(distance > 0.2);
+      sprite.setMoving(Math.hypot(dx, dy) > 0.2);
       sprite.x += dx * blend;
       sprite.y += dy * blend;
       sprite.draw();
     }
-    const visualTime = this.state.time + Math.min(100, this.time.now - this.receivedAt);
+    const visualTime = this.state.time + Math.min(TICK_MS, this.time.now - this.receivedAt);
     this.bombs.forEach((bomb) => bomb.update(visualTime));
   }
 }
