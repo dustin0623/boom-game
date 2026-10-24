@@ -1441,3 +1441,5 @@ Preserve the architecture unless the user explicitly requests an architectural c
 - The poller (server/smart-contract/polling) reads and writes only through the transactions-pending and transactions-processed repositories (why: it works unchanged on the mock store and on MongoDB).
 
 - Smart-contract worker is unified: server/smart-contract/processor routes `chain:action` to handlers; in mock mode the app runs one poll cycle every few seconds via a dev-only hook calling runTransactionBatch, in live mode a separate worker process runs the same poller (why: one code path, no mock/live duplication).
+
+- Layout: src/components/layout/AppShell wraps every route from __root; pages outside PUBLIC_PAGE_PATHS show ConnectGate until signed in (why: one auth gate, matches the Chainframe reference).
