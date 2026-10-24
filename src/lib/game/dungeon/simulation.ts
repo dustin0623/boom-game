@@ -49,6 +49,32 @@ export function blastTiles(state: GameState, bomb: Pick<GameBomb, "x" | "y" | "r
   }
   return tiles;
 }
+/** True when a hero standing on `from` after planting there can reach a safe tile quickly. */
+function canEscape(state: GameState, from: Point, blast: Set<string>, danger: Set<string>): boolean {
+  const queue: { p: Point; d: number }[] = [{ p: from, d: 0 }];
+  const seen = new Set([keyOf(from)]);
+  for (let i = 0; i < queue.length; i++) {
+    const { p, d } = queue[i]!;
+    const k = keyOf(p);
+    if (!blast.has(k) && !danger.has(k)) return true;
+    if (d >= 6) continue;
+    for (const dir of DIRECTIONS) {
+      const next = { x: p.x + dir.x, y: p.y + dir.y };
+      const nk = keyOf(next);
+      if (seen.has(nk) || !walkable(state, next)) continue;
+      seen.add(nk);
+      queue.push({ p: next, d: d + 1 });
+    }
+  }
+  return false;
+}
+/**
+ * BombCrypto-style targeting: BFS over reachable safe tiles, score each tile as a
+ * bomb spot by what its blast (using the hero's range) would hit — chests and
+ * high-HP blocks first, multi-block spots preferred, blocks claimed by other
+ * heroes discounted — divided by walking distance. Spots without an escape route
+ * are skipped.
+ */
 function search(
   state: GameState,
   hero: GameHero,
@@ -57,6 +83,7 @@ function search(
 ): { path: Point[]; target: string | null } {
   const start = { x: Math.round(hero.x), y: Math.round(hero.y) };
   const queue = [start];
+  const dist = new Map<string, number>([[keyOf(start), 0]]);
   const parents = new Map<string, Point | null>([[keyOf(start), null]]);
   const pathTo = (end: Point) => {
     const path: Point[] = [];
@@ -67,23 +94,48 @@ function search(
     }
     return path.reverse();
   };
+  let best: { p: Point; target: string; score: number } | null = null;
   for (let i = 0; i < queue.length; i++) {
     const p = queue[i]!;
+    const d = dist.get(keyOf(p))!;
+    // Prune: a far tile can't beat the best score (max realistic value ~ 4 * 6).
+    if (best && 24 / (d + 2) < best.score) break;
     if (!danger.has(keyOf(p))) {
-      for (const d of DIRECTIONS) {
-        const target = keyOf({ x: p.x + d.x, y: p.y + d.y });
-        const node = state.nodes[target];
-        if (node && !node.destroyed && !reserved.has(target)) return { path: pathTo(p), target };
+      const blast = blastTiles(state, { x: p.x, y: p.y, range: hero.bombRange });
+      let value = 0;
+      let target: string | null = null;
+      let targetValue = -1;
+      for (const t of blast) {
+        const k = keyOf(t);
+        const node = state.nodes[k];
+        if (!node || node.destroyed) continue;
+        const base = (node.kind === "chest" ? 3 : 1) + Math.min(node.hp, 10) / 10;
+        const v = reserved.has(k) ? base * 0.25 : base;
+        value += v;
+        if (v > targetValue) {
+          targetValue = v;
+          target = k;
+        }
+      }
+      if (target && value > 0) {
+        const score = value / (d + 2);
+        if (
+          (!best || score > best.score) &&
+          canEscape(state, p, new Set(blast.map(keyOf)), danger)
+        )
+          best = { p, target, score };
       }
     }
-    for (const d of DIRECTIONS) {
-      const next = { x: p.x + d.x, y: p.y + d.y };
+    for (const dir of DIRECTIONS) {
+      const next = { x: p.x + dir.x, y: p.y + dir.y };
       const key = keyOf(next);
       if (parents.has(key) || !walkable(state, next) || danger.has(key)) continue;
       parents.set(key, p);
+      dist.set(key, d + 1);
       queue.push(next);
     }
   }
+  if (best) return { path: pathTo(best.p), target: best.target };
   const choices = queue.filter(
     (p) => !danger.has(keyOf(p)) && Math.abs(p.x - start.x) + Math.abs(p.y - start.y) >= 3,
   );
