@@ -37,6 +37,9 @@ interface GameRuntimeState {
   session: PlayerSession | null;
   /** True while the last chest is destroyed and the server verifies the clear. */
   stageClearing: boolean;
+  /** True while the tab is hidden or the window lost focus — heroes stop working. */
+  gamePaused: boolean;
+  setGamePaused: (paused: boolean) => void;
   syncer: ProgressSyncer | null;
   heroesSyncer: HeroesSyncer | null;
   saveStatus: SaveStatus;
@@ -67,6 +70,8 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
   heroesOnMap: 0,
   session: null,
   stageClearing: false,
+  gamePaused: false,
+  setGamePaused: (gamePaused) => set({ gamePaused }),
   syncer: null,
   heroesSyncer: null,
   saveStatus: "local",
