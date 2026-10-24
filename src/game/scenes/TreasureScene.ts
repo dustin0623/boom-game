@@ -310,6 +310,7 @@ export class TreasureScene extends Phaser.Scene {
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
           // Server advanced the stage (or we drifted): rebuild from its map.
           this.awaitingStage = false;
+          const previous = this.demo.heroes;
           this.demo = createSessionState({
             playerId: this.demo.playerId,
             coins: result.coins,
@@ -318,6 +319,14 @@ export class TreasureScene extends Phaser.Scene {
             destroyedNodes: result.destroyedNodes,
             heroes: this.session?.heroes ?? [],
           });
+          // Keep each hero's energy and deploy state across the new map.
+          for (const hero of Object.values(this.demo.heroes)) {
+            const old = previous[hero.id];
+            if (!old) continue;
+            hero.energy = old.energy;
+            hero.onMap = old.onMap;
+            hero.recoveryAt = old.recoveryAt;
+          }
           this.apply(this.demo, []);
         } else {
           useGameStore.getState().setStats({
