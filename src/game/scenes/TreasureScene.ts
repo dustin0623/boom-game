@@ -43,14 +43,14 @@ export class TreasureScene extends Phaser.Scene {
     this.bombs.clear();
   }
   private apply(state: GameState, effects: GameEffect[]): void {
-    const nodesChanged = this.state?.nodes !== state.nodes || state.mapId !== this.mapId;
+
     if (state.mapId !== this.mapId) {
       this.clearEntities();
       this.mapId = state.mapId;
     }
     this.state = state;
     this.receivedAt = this.time.now;
-    if (nodesChanged) this.map.apply(state);
+    this.map.apply(state);
     for (const [id, sprite] of this.heroes)
       if (!state.heroes[id]?.onMap) {
         sprite.destroy();
