@@ -87,26 +87,21 @@ export async function requirePlayer(playerId: string, token: string): Promise<Pl
   return row;
 }
 
-/** Loads the player's current stage map; creates one for legacy players that lack it. */
+/** Loads the player's current stage map; creates a fresh stage 1 map if missing. */
 export async function loadStageMap(playerId: string): Promise<StageMapRow> {
   const admin = await db();
   const { data } = await admin.from("stage_maps").select("*").eq("player_id", playerId).maybeSingle();
   if (data) return data as StageMapRow;
-  // Legacy row without a stage map: seed it from the player's current stage.
-  const { data: p } = await admin
-    .from("players")
-    .select("stage, seed, destroyed_nodes, last_sync_at")
-    .eq("id", playerId)
-    .maybeSingle();
   const row: StageMapRow = {
     player_id: playerId,
-    stage: p?.stage ?? 1,
-    seed: Number(p?.seed ?? newSeed()),
-    destroyed_nodes: p?.destroyed_nodes ?? [],
-    last_sync_at: p?.last_sync_at ?? new Date().toISOString(),
+    stage: 1,
+    seed: newSeed(),
+    destroyed_nodes: [],
+    last_sync_at: new Date().toISOString(),
   };
   await admin.from("stage_maps").upsert(row, { onConflict: "player_id", ignoreDuplicates: true });
-  return row;
+  const { data: saved } = await admin.from("stage_maps").select("*").eq("player_id", playerId).maybeSingle();
+  return (saved as StageMapRow | null) ?? row;
 }
 
 /** Loads the player's heroes, oldest first. */

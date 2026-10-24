@@ -74,7 +74,6 @@ export const playerRepository: PlayerRepository = {
         password_hash: data.passwordHash,
         is_test: false,
         token_hash: "",
-        seed,
       })
       .select("*")
       .single();
