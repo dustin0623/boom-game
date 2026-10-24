@@ -111,6 +111,32 @@ export class TreasureScene extends Phaser.Scene {
     }
     materializeRecovery(this.demo, Date.now());
   }
+  /** Picks up heroes minted while the board is running; they arrive rested and off the map. */
+  private adoptNewHeroes(): void {
+    const latest = useGameStore.getState().session;
+    if (!this.demo || !this.session || !latest || latest.playerId !== this.session.playerId) return;
+    if (latest.heroes.length === this.session.heroes.length) return;
+    const now = Date.now();
+    for (const h of latest.heroes) {
+      if (this.demo.heroes[h.id]) continue;
+      this.demo.heroes[h.id] = {
+        ...h,
+        mintedNumber: h.mintedNumber ?? 0,
+        owner: latest.playerId,
+        level: 1,
+        energy: h.maxEnergy,
+        onMap: false,
+        recoveryAt: now,
+        market: { listed: false, price: 0, seller: null, created: 0, sold: 0 },
+        x: 1,
+        y: 1,
+        phase: "searching",
+        path: [],
+        target: null,
+      };
+    }
+    this.session = latest;
+  }
   private runCommands(): void {
     if (!this.demo) return;
     const store = useGameStore.getState();
@@ -353,6 +379,7 @@ export class TreasureScene extends Phaser.Scene {
       if (this.demoElapsed >= TICK_MS && !this.awaitingStage) {
         this.demoElapsed = 0;
         if (this.session) {
+          this.adoptNewHeroes();
           this.runCommands();
           materializeRecovery(this.demo, Date.now());
         } else {

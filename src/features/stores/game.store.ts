@@ -37,6 +37,8 @@ interface GameRuntimeState {
   sendCommand: (command: HeroCommand) => void;
   takeCommands: () => HeroCommand[];
   setDeployError: (error: string | null) => void;
+  /** Appends freshly minted heroes so the play scene and drawer pick them up instantly. */
+  addHeroes: (heroes: SessionHero[]) => void;
   reset: () => void;
 }
 
@@ -61,5 +63,13 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
     return commands;
   },
   setDeployError: (deployError) => set({ deployError }),
+  addHeroes: (heroes) =>
+    set((s) => {
+      if (!s.session) return {};
+      const known = new Set(s.session.heroes.map((h) => h.id));
+      const fresh = heroes.filter((h) => !known.has(h.id));
+      if (!fresh.length) return {};
+      return { session: { ...s.session, heroes: [...s.session.heroes, ...fresh] } };
+    }),
   reset: () => set({ coins: 0, stage: 1, heroesOnMap: 0, roster: [], commands: [] }),
 }));
