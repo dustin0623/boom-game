@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { LogOut, Mail, PanelLeft, Star, Wallet, Zap } from "lucide-react";
+import { Info, LogOut, Mail, PanelLeft, Settings, Star, User, Users, Wallet, Zap } from "lucide-react";
+import { AboutModal, ProfileModal, ReferralModal, SettingsModal } from "./SidebarModals";
 import { useGameStore } from "@/features/stores/game.store";
 import { WalletModal, formatAmount } from "./WalletModal";
 import { BrandLogo, TokenIcon } from "@/components/brand/Brand";
@@ -21,6 +23,7 @@ const short = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}
 function AccountRow({ collapsed }: { collapsed: boolean }) {
   const player = useAuthStore((s) => s.player);
   const logout = useAuthStore((s) => s.logout);
+  const [rowModal, setRowModal] = useState<"profile" | "referral" | "settings" | null>(null);
 
   if (!player) {
     if (collapsed) return null;
@@ -40,6 +43,7 @@ function AccountRow({ collapsed }: { collapsed: boolean }) {
   }
 
   const address = player.walletAddress ?? player.username;
+  const [modal, setModal] = [rowModal, setRowModal];
   const name = player.displayName || player.username;
   return (
     <div className={cn("flex items-center gap-1 px-2 pb-2", collapsed && "justify-center")}>
@@ -74,11 +78,24 @@ function AccountRow({ collapsed }: { collapsed: boolean }) {
         <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuLabel className="font-mono text-xs">{short(address)}</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setModal("profile")} className="gap-2">
+            <User className="size-4" /> Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setModal("referral")} className="gap-2">
+            <Users className="size-4" /> Referral
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setModal("settings")} className="gap-2">
+            <Settings className="size-4" /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={logout} className="gap-2">
             <LogOut className="size-4" /> Disconnect
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ProfileModal open={modal === "profile"} onOpenChange={(o) => !o && setModal(null)} />
+      <ReferralModal open={modal === "referral"} onOpenChange={(o) => !o && setModal(null)} />
+      <SettingsModal open={modal === "settings"} onOpenChange={(o) => !o && setModal(null)} />
       {!collapsed && (
         <button
           type="button"
