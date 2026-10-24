@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      heroes: {
+        Row: {
+          bomb_number: number
+          bomb_range: number
+          created_at: string
+          energy: number
+          id: string
+          max_energy: number
+          minted_number: number | null
+          name: string
+          on_map: boolean
+          player_id: string
+          power: number
+          rarity: string
+          recovery_at: string
+          speed: number
+          stamina: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          bomb_number: number
+          bomb_range: number
+          created_at?: string
+          energy: number
+          id: string
+          max_energy: number
+          minted_number?: number | null
+          name: string
+          on_map?: boolean
+          player_id: string
+          power: number
+          rarity: string
+          recovery_at?: string
+          speed: number
+          stamina: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          bomb_number?: number
+          bomb_range?: number
+          created_at?: string
+          energy?: number
+          id?: string
+          max_energy?: number
+          minted_number?: number | null
+          name?: string
+          on_map?: boolean
+          player_id?: string
+          power?: number
+          rarity?: string
+          recovery_at?: string
+          speed?: number
+          stamina?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heroes_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_inventory: {
         Row: {
           created_at: string
@@ -111,6 +179,41 @@ export type Database = {
           wallet_address?: string | null
         }
         Relationships: []
+      }
+      stage_maps: {
+        Row: {
+          destroyed_nodes: string[]
+          last_sync_at: string
+          player_id: string
+          seed: number
+          stage: number
+          updated_at: string
+        }
+        Insert: {
+          destroyed_nodes?: string[]
+          last_sync_at?: string
+          player_id: string
+          seed: number
+          stage?: number
+          updated_at?: string
+        }
+        Update: {
+          destroyed_nodes?: string[]
+          last_sync_at?: string
+          player_id?: string
+          seed?: number
+          stage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_maps_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions_pending: {
         Row: {
@@ -232,6 +335,10 @@ export type Database = {
       }
       request_withdrawal: {
         Args: { p_address: string; p_amount: number; p_player_id: string }
+        Returns: Json
+      }
+      save_heroes_state: {
+        Args: { p_heroes: Json; p_player_id: string }
         Returns: Json
       }
       save_progress: {

@@ -5,14 +5,56 @@ export type PlayerRow = {
   wallet_address: string | null;
   coins: number;
   deposited_balance: number;
+  token_hash: string;
+  updated_at: string;
+};
+
+/** A row from the public.heroes table. */
+export type HeroRow = {
+  id: string;
+  player_id: string;
+  minted_number: number | null;
+  name: string;
+  type: string;
+  rarity: string;
+  power: number;
+  speed: number;
+  stamina: number;
+  bomb_number: number;
+  bomb_range: number;
+  max_energy: number;
+  energy: number;
+  on_map: boolean;
+  recovery_at: string;
+};
+
+/** A row from the public.stage_maps table. */
+export type StageMapRow = {
+  player_id: string;
   stage: number;
   seed: number;
   destroyed_nodes: string[];
-  heroes: unknown;
-  token_hash: string;
   last_sync_at: string;
-  updated_at: string;
 };
+
+export function heroRowToSession(r: HeroRow): SessionHero {
+  return {
+    id: r.id,
+    mintedNumber: r.minted_number ?? undefined,
+    name: r.name,
+    type: r.type,
+    rarity: r.rarity,
+    power: r.power,
+    speed: r.speed,
+    stamina: r.stamina,
+    bombNumber: r.bomb_number,
+    bombRange: r.bomb_range,
+    maxEnergy: r.max_energy,
+    energy: r.energy,
+    onMap: r.on_map,
+    recoveryAt: new Date(r.recovery_at).getTime(),
+  };
+}
 
 export async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -21,10 +63,18 @@ export async function sha256(text: string): Promise<string> {
 
 export const newSeed = () => Math.floor(Math.random() * 2147483647);
 
+async function db() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
 /** Loads a player row only when the browser-held token matches the stored hash. */
 export async function loadPlayer(playerId: string, token: string): Promise<PlayerRow | null> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("players").select("*").eq("id", playerId).maybeSingle();
+  const { data } = await (await db())
+    .from("players")
+    .select("id, wallet_address, coins, deposited_balance, token_hash, updated_at")
+    .eq("id", playerId)
+    .maybeSingle();
   if (!data || !data.token_hash || data.token_hash !== (await sha256(token))) return null;
   return data as PlayerRow;
 }
@@ -36,11 +86,43 @@ export async function requirePlayer(playerId: string, token: string): Promise<Pl
   return row;
 }
 
-export const toSession = (r: PlayerRow): PlayerSession => ({
+/** Loads the player's current stage map; creates one for legacy players that lack it. */
+export async function loadStageMap(playerId: string): Promise<StageMapRow> {
+  const admin = await db();
+  const { data } = await admin.from("stage_maps").select("*").eq("player_id", playerId).maybeSingle();
+  if (data) return data as StageMapRow;
+  // Legacy row without a stage map: seed it from the player's current stage.
+  const { data: p } = await admin
+    .from("players")
+    .select("stage, seed, destroyed_nodes, last_sync_at")
+    .eq("id", playerId)
+    .maybeSingle();
+  const row: StageMapRow = {
+    player_id: playerId,
+    stage: p?.stage ?? 1,
+    seed: Number(p?.seed ?? newSeed()),
+    destroyed_nodes: p?.destroyed_nodes ?? [],
+    last_sync_at: p?.last_sync_at ?? new Date().toISOString(),
+  };
+  await admin.from("stage_maps").upsert(row, { onConflict: "player_id", ignoreDuplicates: true });
+  return row;
+}
+
+/** Loads the player's heroes, oldest first. */
+export async function loadHeroes(playerId: string): Promise<SessionHero[]> {
+  const { data } = await (await db())
+    .from("heroes")
+    .select("*")
+    .eq("player_id", playerId)
+    .order("created_at", { ascending: true });
+  return (data ?? []).map((r) => heroRowToSession(r as HeroRow));
+}
+
+export const toSession = (r: PlayerRow, map: StageMapRow, heroes: SessionHero[]): PlayerSession => ({
   playerId: r.id,
   coins: Number(r.coins),
-  stage: r.stage,
-  seed: Number(r.seed),
-  destroyedNodes: r.destroyed_nodes,
-  heroes: r.heroes as SessionHero[],
+  stage: map.stage,
+  seed: Number(map.seed),
+  destroyedNodes: map.destroyed_nodes,
+  heroes,
 });

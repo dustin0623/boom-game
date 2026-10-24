@@ -90,15 +90,16 @@ export function createSessionState(session: PlayerSession, now: number = Date.no
     coins: session.coins,
     daily: { date: new Date(now).toISOString().slice(0, 10), used: 0, cap: 0 },
   };
-  session.heroes.forEach((h, i) => {
+  session.heroes.forEach((h) => {
     const hero: GameHero = {
       ...h,
-      mintedNumber: i,
+      mintedNumber: h.mintedNumber ?? 0,
       owner: session.playerId,
       level: 1,
-      energy: h.maxEnergy,
-      onMap: true,
-      recoveryAt: now,
+      // Server-persisted live state; new heroes start rested and off the map.
+      energy: Math.min(h.maxEnergy, Math.max(0, h.energy ?? h.maxEnergy)),
+      onMap: h.onMap ?? true,
+      recoveryAt: h.recoveryAt ?? now,
       market: { listed: false, price: 0, seller: null, created: 0, sold: 0 },
       x: 1,
       y: 1,
