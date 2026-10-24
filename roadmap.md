@@ -27,6 +27,9 @@
 - [x] Atomic database transactions for purchase / chest open / withdrawal
 - [x] Demo mode removed; Play/Shop/Inventory gated behind sign-in
 
+- [x] Stage transition: confirmed next stage stays after leaving/returning to Play
+- [x] Boxed-in heroes on fresh maps still bomb instead of freezing
+
 ## Later
 - [ ] Payout worker that sends queued withdrawals on-chain (needs treasury wallet + secret)
 - [ ] Deposit detection (watch treasury address, credit by destination tag)
