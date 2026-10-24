@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Player } from "@/features/types/auth.types";
 
 type AuthState = {
@@ -7,8 +8,14 @@ type AuthState = {
   logout: () => void;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
-  player: null,
-  setPlayer: (player) => set({ player }),
-  logout: () => set({ player: null }),
-}));
+/** Persisted under "chainframe-auth"; read only after hydration (see useHydrated). */
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      player: null,
+      setPlayer: (player) => set({ player }),
+      logout: () => set({ player: null }),
+    }),
+    { name: "chainframe-auth" },
+  ),
+);
