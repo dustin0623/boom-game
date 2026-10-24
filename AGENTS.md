@@ -19,8 +19,8 @@ This file provides the operational rules that AI agents must follow when modifyi
 
 - Persistence is Lovable Cloud (PostgreSQL) via `supabaseAdmin`, not MongoDB/mock: players, player_inventory, transactions_pending/processed live in the cloud database; `playerRepository` is Supabase-backed and the mock store is legacy (why: game progress, shop and wallet must survive restarts).
 - Game sessions are token-authenticated: login issues a random token, the database stores only its SHA-256 hash, and every game server function validates playerId+token via `requirePlayer`/`loadPlayer` in `src/lib/game/session/player.server.ts` (why: no Supabase Auth users; wallet signature is the identity).
-- The play scene runs locally and checkpoints: TreasureScene simulates at 60 FPS, buffers destroyed block keys, and flushes to `syncProgress` every ~4s; the server validates claims against the seeded map and owns stage advancement (why: anti-cheat without a WebSocket server).
-- Shop purchases and chest opens are synchronous server functions with balance/quantity guards; withdrawals enqueue `transactions_pending` rows for a future worker (why: only on-chain payout needs async processing).
+- The play scene runs locally and checkpoints: TreasureScene buffers destroyed block keys (mirrored to localStorage per player+seed until confirmed), flushes every ~4s and immediately on tab hide/page leave; `syncProgress` validates claims against the seeded map, then the `save_progress` DB function credits only not-yet-saved keys atomically and owns stage advancement (why: anti-cheat, no lost or double-paid progress, no WebSocket server).
+- Heroes are minted with in-game coins (Boom Miner rules, no wallet transaction): server rolls rarity/type/attributes, `mint_heroes` DB function debits coins, assigns global sequential mint numbers and appends to the roster atomically; withdrawals enqueue `transactions_pending` rows for a future worker (why: only on-chain payout needs async processing).
 
 ---
 

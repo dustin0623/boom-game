@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Coins, Loader2 } from "lucide-react";
+import { Coins, Loader2, Minus, Plus, Sparkles } from "lucide-react";
+import { HeroSprite } from "@/components/game/HeroSprite";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
-import { SHOP_ITEMS } from "@/lib/game/shop/items";
-import { purchaseItem } from "@/lib/game/shop/shop.functions";
+import { HERO_RARITY_DEFS, HERO_SPRITES, HeroRarity, type HeroType } from "@/game/data/HeroRarity";
 import { listInventory } from "@/lib/game/inventory/inventory.functions";
+import { mintHeroes } from "@/lib/game/heroes/heroes.functions";
+import { MAX_MINT_PER_TX, mintCost } from "@/lib/game/heroes/mint";
+import type { SessionHero } from "@/lib/game/session/types";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
       { title: "Shop — Chainframe" },
-      { name: "description", content: "Spend mined coins on bomber chests and grow your crew." },
+      { name: "description", content: "Mint new bombers with your in-game coins." },
       { property: "og:title", content: "Shop — Chainframe" },
-      { property: "og:description", content: "Spend mined coins on bomber chests and grow your crew." },
+      { property: "og:description", content: "Mint new bombers with your in-game coins." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -26,8 +29,10 @@ function Page() {
   const player = useAuthStore((s) => s.player);
   const token = useAuthStore((s) => s.token);
   const [coins, setCoins] = useState<number | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [qty, setQty] = useState(1);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [minted, setMinted] = useState<SessionHero[]>([]);
 
   const refresh = useCallback(() => {
     if (!player || !token) return;
@@ -35,27 +40,28 @@ function Page() {
       .then((snap) => setCoins(snap.coins))
       .catch(() => setCoins(null));
   }, [player, token]);
-
   useEffect(refresh, [refresh]);
 
-  const buy = async (itemId: string) => {
+  const total = mintCost(qty);
+  const mint = async () => {
     if (!player || !token || busy) return;
-    setBusy(itemId);
+    setBusy(true);
     setMessage(null);
     try {
-      const result = await purchaseItem({ data: { playerId: player.id, token, itemId } });
+      const result = await mintHeroes({ data: { playerId: player.id, token, count: qty } });
       setCoins(result.coins);
-      setMessage("Chest added to your inventory — open it there to hatch your bomber.");
+      setMinted(result.heroes);
+      setMessage(`${result.heroes.length} hero${result.heroes.length > 1 ? "es" : ""} joined your crew.`);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Purchase failed");
+      setMessage(e instanceof Error ? e.message : "Mint failed");
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
   return (
     <>
-      <PageHeader title="Shop" description="Spend mined coins on bomber chests and grow your crew." />
+      <PageHeader title="Shop" description="Mint new bombers with your in-game coins. Deposits add coins." />
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-2 sm:w-fit">
         <Coins className="size-4 text-primary" />
         <span className="text-xs text-muted-foreground">Your coins</span>
@@ -63,35 +69,55 @@ function Page() {
           {coins === null ? "…" : coins.toLocaleString()}
         </span>
       </div>
-      {message && <p className="mb-4 text-sm text-muted-foreground">{message}</p>}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {SHOP_ITEMS.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col items-center rounded-xl border border-border bg-card/60 p-5 text-center transition hover:border-primary/30"
-          >
-            <img
-              src={item.image}
-              alt={item.name}
-              className="mb-3 h-16 w-auto"
-              style={{ imageRendering: "pixelated" }}
-            />
-            <h3 className="text-sm font-semibold">{item.name}</h3>
-            <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-            <p className="mt-3 font-mono text-sm font-bold tabular-nums text-primary">
-              {item.price.toLocaleString()} coins
-            </p>
-            <Button
-              className="mt-3 w-full"
-              size="sm"
-              disabled={busy !== null || coins === null || coins < item.price}
-              onClick={() => buy(item.id)}
-            >
-              {busy === item.id ? <Loader2 className="size-4 animate-spin" /> : "Buy"}
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <div className="rounded-xl border border-primary/25 bg-card/60 p-6 text-center">
+          <Sparkles className="mx-auto mb-2 size-8 text-primary" />
+          <h2 className="text-lg font-semibold">Mint a hero</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Each mint rolls a random bomber from the drop table.</p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <Button size="icon" variant="outline" disabled={qty <= 1 || busy} onClick={() => setQty(qty - 1)} aria-label="Fewer">
+              <Minus className="size-4" />
+            </Button>
+            <span className="w-10 font-mono text-2xl font-bold tabular-nums">{qty}</span>
+            <Button size="icon" variant="outline" disabled={qty >= MAX_MINT_PER_TX || busy} onClick={() => setQty(qty + 1)} aria-label="More">
+              <Plus className="size-4" />
             </Button>
           </div>
-        ))}
+          <p className="mt-4 font-mono text-sm font-bold tabular-nums text-primary">{total.toLocaleString()} coins</p>
+          <Button className="mt-4 w-full" disabled={busy || coins === null || coins < total} onClick={mint}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : `Mint ${qty}`}
+          </Button>
+          {message && <p className="mt-3 text-sm text-muted-foreground">{message}</p>}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card/60 p-6">
+          <h3 className="mb-3 text-sm font-semibold">Drop rates</h3>
+          <ul className="space-y-1.5 text-sm">
+            {Object.values(HeroRarity).map((r) => (
+              <li key={r} className="flex justify-between">
+                <span className="capitalize">{HERO_RARITY_DEFS[r].label}</span>
+                <span className="font-mono tabular-nums text-muted-foreground">{HERO_RARITY_DEFS[r].weight}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
+
+      {minted.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold">Just minted</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {minted.map((h) => (
+              <div key={h.id} className="flex flex-col items-center rounded-xl border border-border bg-card/60 p-4 text-center">
+                <HeroSprite sprite={HERO_SPRITES[h.type as HeroType] ?? "ricky"} scale={3} />
+                <p className="mt-2 text-sm font-semibold">{h.name}</p>
+                <p className="text-[11px] capitalize text-muted-foreground">{h.rarity}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }

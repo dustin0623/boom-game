@@ -18,6 +18,8 @@ export interface ClaimOutcome {
   coins: number;
   accepted: number;
   rejected: number;
+  /** Newly accepted keys → coins (0 for bushes). */
+  rewards: Record<string, number>;
   /** True when every chest of this map is now destroyed. */
   cleared: boolean;
 }
@@ -35,6 +37,7 @@ export function validateClaims(input: ClaimInput): ClaimOutcome {
   let accepted = 0;
   let rejected = 0;
   let chests = 0;
+  const rewards: Record<string, number> = {};
   for (const key of new Set(input.claimed)) {
     const node = nodes.get(key);
     if (!node || destroyed.has(key)) {
@@ -50,8 +53,9 @@ export function validateClaims(input: ClaimInput): ClaimOutcome {
       coins += node.coins;
     }
     destroyed.add(key);
+    rewards[key] = node.kind === "chest" ? node.coins : 0;
     accepted++;
   }
   const cleared = [...nodes.entries()].every(([k, n]) => n.kind !== "chest" || destroyed.has(k));
-  return { destroyed: [...destroyed], coins, accepted, rejected, cleared };
+  return { destroyed: [...destroyed], coins, accepted, rejected, rewards, cleared };
 }

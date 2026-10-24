@@ -47,7 +47,15 @@ export class TreasureScene extends Phaser.Scene {
     this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
     if (this.session) useGameStore.getState().setSaveStatus("saved");
+    this.restorePending();
     this.apply(this.demo, []);
+    // Save immediately when the player leaves the tab or page.
+    const flushNow = () => {
+      if (document.hidden) this.flush();
+    };
+    const onPageHide = () => this.flush();
+    document.addEventListener("visibilitychange", flushNow);
+    window.addEventListener("pagehide", onPageHide);
     // Kill any boom one-shots the moment the tab is hidden so they cannot pile
     // up while Phaser's audio is paused and blast all at once on return.
     const stopBooms = () => this.sound.getAll("boom_sfx").forEach((s) => s.stop());
@@ -56,6 +64,9 @@ export class TreasureScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       document.removeEventListener("visibilitychange", stopBooms);
       window.removeEventListener("blur", stopBooms);
+      document.removeEventListener("visibilitychange", flushNow);
+      window.removeEventListener("pagehide", onPageHide);
+      this.flush();
       this.clearEntities();
       this.demo = null;
     });
@@ -167,6 +178,45 @@ export class TreasureScene extends Phaser.Scene {
         }
       else if (effect.type === "reward") this.pendingKeys.add(effect.nodeKey);
     }
+    if (effects.length) this.persistPending();
+  }
+
+  private pendingStorageKey(): string | null {
+    return this.demo && this.session ? `chainframe.pending:${this.session.playerId}:${this.demo.seed}` : null;
+  }
+  /** Unsaved blocks survive a refresh/crash: kept locally until the server confirms them. */
+  private persistPending(): void {
+    const key = this.pendingStorageKey();
+    if (!key) return;
+    try {
+      if (this.pendingKeys.size) localStorage.setItem(key, JSON.stringify([...this.pendingKeys]));
+      else localStorage.removeItem(key);
+    } catch {
+      /* storage full or blocked — server sync still runs */
+    }
+  }
+  private restorePending(): void {
+    const key = this.pendingStorageKey();
+    if (!key || !this.demo) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown;
+      if (!Array.isArray(saved)) return;
+      for (const k of saved) {
+        const node = typeof k === "string" ? this.demo.nodes[k] : undefined;
+        if (!node || node.destroyed) continue;
+        node.destroyed = true;
+        this.pendingKeys.add(k);
+      }
+      if (this.pendingKeys.size) this.syncElapsed = SYNC_INTERVAL_MS;
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+  /** Send pending blocks right away (tab hidden, leaving the page). */
+  private flush(): void {
+    if (!this.session || !this.pendingKeys.size) return;
+    this.syncElapsed = SYNC_INTERVAL_MS;
+    this.tickSync(0);
   }
 
   /** Flush destroyed blocks to the server every few seconds and reconcile. */
@@ -183,6 +233,7 @@ export class TreasureScene extends Phaser.Scene {
     syncer(state.seed, sent)
       .then((result) => {
         for (const key of sent) this.pendingKeys.delete(key);
+        this.persistPending();
         if (!this.demo) return;
         this.demo.coins = result.coins;
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
