@@ -43,7 +43,6 @@ export class TreasureScene extends Phaser.Scene {
     this.bombs.clear();
   }
   private apply(state: GameState, effects: GameEffect[]): void {
-
     if (state.mapId !== this.mapId) {
       this.clearEntities();
       this.mapId = state.mapId;
