@@ -24,6 +24,8 @@ interface GameRuntimeState {
   heroesOnMap: number;
   /** Saved cloud session; null means the scene runs a local, unsaved board. */
   session: PlayerSession | null;
+  /** True while the last chest is destroyed and the server verifies the clear. */
+  stageClearing: boolean;
   syncer: ProgressSyncer | null;
   saveStatus: SaveStatus;
   roster: RosterHero[];
@@ -33,6 +35,7 @@ interface GameRuntimeState {
   setStats: (stats: { coins: number; stage: number; heroesOnMap: number }) => void;
   setSession: (session: PlayerSession | null, syncer: ProgressSyncer | null) => void;
   setSaveStatus: (status: SaveStatus) => void;
+  setStageClearing: (clearing: boolean) => void;
   setRoster: (roster: RosterHero[]) => void;
   sendCommand: (command: HeroCommand) => void;
   takeCommands: () => HeroCommand[];
@@ -47,6 +50,7 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
   stage: 1,
   heroesOnMap: 0,
   session: null,
+  stageClearing: false,
   syncer: null,
   saveStatus: "local",
   roster: [],
@@ -55,6 +59,7 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
   setStats: (stats) => set(stats),
   setSession: (session, syncer) => set({ session, syncer }),
   setSaveStatus: (saveStatus) => set({ saveStatus }),
+  setStageClearing: (stageClearing) => set({ stageClearing }),
   setRoster: (roster) => set({ roster }),
   sendCommand: (command) => set((s) => ({ commands: [...s.commands, command], deployError: null })),
   takeCommands: () => {
@@ -71,5 +76,5 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
       if (!fresh.length) return {};
       return { session: { ...s.session, heroes: [...s.session.heroes, ...fresh] } };
     }),
-  reset: () => set({ coins: 0, stage: 1, heroesOnMap: 0, roster: [], commands: [] }),
+  reset: () => set({ coins: 0, stage: 1, heroesOnMap: 0, roster: [], commands: [], stageClearing: false }),
 }));
