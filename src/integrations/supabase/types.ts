@@ -14,13 +14,157 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      players: {
+        Row: {
+          coins: number
+          created_at: string
+          destroyed_nodes: string[]
+          heroes: Json
+          id: string
+          is_test: boolean
+          last_sync_at: string
+          seed: number
+          stage: number
+          token_hash: string
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          coins?: number
+          created_at?: string
+          destroyed_nodes?: string[]
+          heroes?: Json
+          id?: string
+          is_test?: boolean
+          last_sync_at?: string
+          seed: number
+          stage?: number
+          token_hash: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          destroyed_nodes?: string[]
+          heroes?: Json
+          id?: string
+          is_test?: boolean
+          last_sync_at?: string
+          seed?: number
+          stage?: number
+          token_hash?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      transactions_pending: {
+        Row: {
+          action: string
+          attempts: number
+          created_at: string
+          id: string
+          locked_at: string | null
+          payload: Json
+          player_id: string
+          status: string
+        }
+        Insert: {
+          action: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          payload?: Json
+          player_id: string
+          status?: string
+        }
+        Update: {
+          action?: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          payload?: Json
+          player_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_pending_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions_processed: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          pending_id: string | null
+          player_id: string
+          result: Json
+          status: string
+          tx_hash: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          pending_id?: string | null
+          player_id: string
+          result?: Json
+          status: string
+          tx_hash?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          pending_id?: string | null
+          player_id?: string
+          result?: Json
+          status?: string
+          tx_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_processed_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_pending_transactions: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          attempts: number
+          created_at: string
+          id: string
+          locked_at: string | null
+          payload: Json
+          player_id: string
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "transactions_pending"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       [_ in never]: never
