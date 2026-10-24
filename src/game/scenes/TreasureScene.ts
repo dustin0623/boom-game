@@ -40,6 +40,8 @@ export class TreasureScene extends Phaser.Scene {
   private demo: GameState | null = null;
   private demoElapsed = 0;
   private receivedAt = 0;
+  /** Player is away (tab hidden / window blurred): heroes stop working. */
+  private away = false;
   private session: PlayerSession | null = null;
   private pendingKeys = new Set<string>();
   private syncElapsed = 0;
@@ -77,7 +79,33 @@ export class TreasureScene extends Phaser.Scene {
     const stopBooms = () => this.sound.getAll("boom_sfx").forEach((s) => s.stop());
     document.addEventListener("visibilitychange", stopBooms);
     window.addEventListener("blur", stopBooms);
+    // Heroes stop working while the player is away (tab hidden or window blurred),
+    // matching Boom Miner. Only the play session pauses; the homepage backdrop keeps running.
+    const setAway = (away: boolean) => {
+      if (!this.session || this.away === away) return;
+      this.away = away;
+      useGameStore.getState().setGamePaused(away);
+      if (away) {
+        this.flush();
+      } else {
+        this.demoElapsed = 0;
+        this.receivedAt = this.time.now;
+      }
+    };
+    const onVis = () => setAway(document.hidden || !document.hasFocus());
+    const onBlur = () => setAway(true);
+    const onFocus = () => setAway(document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    this.away = false;
+    useGameStore.getState().setGamePaused(false);
+    if (this.session && (document.hidden || !document.hasFocus())) setAway(true);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      useGameStore.getState().setGamePaused(false);
       document.removeEventListener("visibilitychange", stopBooms);
       window.removeEventListener("blur", stopBooms);
       document.removeEventListener("visibilitychange", flushNow);

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
-import { CloudCheck, CloudOff, Coins, Layers, Loader2, Trophy, Users } from "lucide-react";
+import { CloudCheck, CloudOff, Coins, Layers, Loader2, Pause, Trophy, Users } from "lucide-react";
 import { PhaserGame } from "@/components/game/PhaserGame";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { HeroesDrawer } from "@/components/game/HeroesDrawer";
@@ -60,6 +60,7 @@ function SaveIndicator() {
 function PlayPage() {
   const player = useAuthStore((s) => s.player);
   const token = useAuthStore((s) => s.token);
+  const gamePaused = useGameStore((s) => s.gamePaused);
   const { coins, stage, heroesOnMap, session, setSession, setSaveStatus, stageClearing, saveStatus } =
     useGameStore();
 
@@ -107,6 +108,15 @@ function PlayPage() {
             </div>
           )}
         </ClientOnly>
+        {gamePaused && !stageClearing && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-background/70 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2 px-4 text-center">
+              <Pause className="size-8 text-primary" />
+              <p className="text-base font-semibold tracking-wide">Game paused</p>
+              <p className="text-sm text-muted-foreground">Your bombers rest while you're away. Click here to continue.</p>
+            </div>
+          </div>
+        )}
         {stageClearing && (
           <div className="absolute inset-0 z-10 grid place-items-center bg-background/85 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3 px-4 text-center">
