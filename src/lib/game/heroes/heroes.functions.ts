@@ -27,6 +27,6 @@ export const mintHeroes = createServerFn({ method: "POST" })
       if (error.message.includes("not_enough_coins")) throw new Error("Not enough coins");
       throw new Error("Mint failed — try again");
     }
-    const r = result as { coins: number; heroes: SessionHero[] };
+    const r = result as unknown as { coins: number; heroes: SessionHero[] };
     return { coins: Number(r.coins), heroes: r.heroes };
   });

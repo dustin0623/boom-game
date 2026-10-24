@@ -64,7 +64,7 @@ export const syncProgress = createServerFn({ method: "POST" })
       p_new_seed: outcome.cleared ? newSeed() : 0,
     });
     if (error || !saved) throw new Error("Save failed");
-    const s = saved as { coins: number; stage: number; seed: number; destroyed: string[]; accepted: number };
+    const s = saved as unknown as { coins: number; stage: number; seed: number; destroyed: string[]; accepted: number };
     return {
       ok: true,
       coins: Number(s.coins),
