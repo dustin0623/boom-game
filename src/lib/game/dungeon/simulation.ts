@@ -235,6 +235,19 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
       if (!hero.onMap) hero.recoveryAt = now;
     }
     result.effects.push({ type: "explosion", id: bomb.id, tiles });
+  }
+  // Working heroes never recover. Pin their rest clock to now, and recall any
+  // hero that can no longer afford a bomb straight off the map.
+  for (const hero of Object.values(state.heroes)) {
+    if (!hero.onMap) continue;
+    hero.recoveryAt = now;
+    const pending = Object.values(state.bombs).some((b) => b.heroId === hero.id);
+    if (hero.energy < 1 && !pending) {
+      hero.onMap = false;
+      hero.path = [];
+      hero.target = null;
+      result.durable = true;
+    }
     result.resolvedBombs.push(bomb.id);
     result.durable = true;
   }
