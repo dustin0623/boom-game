@@ -30,8 +30,8 @@ export const chainEnv = {
   },
   xrpl: {
     /** Xaman developer console (apps.xumm.dev) API key + secret. Server-only. */
-    xamanApiKey: "XAMAN_API_KEY",
-    xamanApiSecret: "XAMAN_API_SECRET",
+    xamanApiKey: "API_KEY",
+    xamanApiSecret: "API_SECRET",
   },
 } as const;
 
