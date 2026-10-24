@@ -1,34 +1,5 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1792823645472,
-      "tag": "0000_migration",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1792827551868,
-      "tag": "0001_player_profiles_and_inventory",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1792830091858,
-      "tag": "0002_atomic_game_transactions",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1792830847921,
-      "tag": "0003_hero_minting_and_atomic_sync",
-      "breakpoints": true
-    }
-  ]
+  "entries": []
 }
