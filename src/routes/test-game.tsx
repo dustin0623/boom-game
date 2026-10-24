@@ -4,7 +4,7 @@ import { PhaserGame } from "@/components/game/PhaserGame";
 import { HeroesDrawer } from "@/components/game/HeroesDrawer";
 import { useGameStore } from "@/features/stores/game.store";
 import { validateClaims } from "@/lib/game/session/validate";
-import { createStarterHeroes } from "@/lib/game/heroes/starter";
+import { starterHeroes } from "@/lib/game/session/starter";
 import type { PlayerSession, SyncResult } from "@/lib/game/session/types";
 
 /**
@@ -46,7 +46,7 @@ function TestGame() {
       lines.push(s);
       setLog([...lines].slice(-12));
     };
-    const heroes = createStarterHeroes().map((h) => ({ ...h, energy: h.maxEnergy, onMap: true, recoveryAt: Date.now() }));
+    const heroes = starterHeroes().map((h) => ({ ...h, energy: h.maxEnergy, onMap: true, recoveryAt: Date.now() }));
     const loaded: PlayerSession = { playerId: "test-player", coins: 0, stage: 1, seed: server.seed, destroyedNodes: [], heroes };
     setSession(
       loaded,
