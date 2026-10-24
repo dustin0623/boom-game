@@ -63,6 +63,12 @@ interface GameRuntimeState {
   addHeroes: (heroes: SessionHero[]) => void;
   /** Keeps the cached session in step with the server's confirmed map so re-opening Play resumes it. */
   patchSession: (patch: Partial<Pick<PlayerSession, "coins" | "stage" | "seed" | "destroyedNodes">>) => void;
+  /** Writes live hero energy/deploy/recovery into the cached session. */
+  patchSessionHeroes: (heroes: HeroStatePayload[]) => void;
+  /** Number of saves in flight; status reads "saved" only once all are confirmed. */
+  inFlight: number;
+  beginSave: () => void;
+  endSave: (ok: boolean) => void;
   reset: () => void;
 }
 
@@ -101,5 +107,26 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
       return { session: { ...s.session, heroes: [...s.session.heroes, ...fresh] } };
     }),
   patchSession: (patch) => set((s) => (s.session ? { session: { ...s.session, ...patch } } : {})),
+  patchSessionHeroes: (updates) =>
+    set((s) => {
+      if (!s.session) return {};
+      const byId = new Map(updates.map((u) => [u.id, u]));
+      return {
+        session: {
+          ...s.session,
+          heroes: s.session.heroes.map((h) => {
+            const u = byId.get(h.id);
+            return u ? { ...h, energy: u.energy, onMap: u.onMap, recoveryAt: u.recoveryAt } : h;
+          }),
+        },
+      };
+    }),
+  inFlight: 0,
+  beginSave: () => set((s) => ({ inFlight: s.inFlight + 1, saveStatus: "saving" })),
+  endSave: (ok) =>
+    set((s) => {
+      const inFlight = Math.max(0, s.inFlight - 1);
+      return { inFlight, saveStatus: !ok ? "error" : inFlight ? "saving" : "saved" };
+    }),
   reset: () => set({ coins: 0, stage: 1, heroesOnMap: 0, roster: [], commands: [], stageClearing: false }),
 }));

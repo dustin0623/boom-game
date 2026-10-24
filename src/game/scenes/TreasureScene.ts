@@ -37,8 +37,9 @@ export class TreasureScene extends Phaser.Scene {
   private heroes = new Map<string, Hero>();
   private bombs = new Map<string, Bomb>();
   private mapId = "";
-  private demo: GameState | null = null;
-  private demoElapsed = 0;
+  /** Live simulation state for the current board. */
+  private live: GameState | null = null;
+  private tickElapsed = 0;
   private receivedAt = 0;
   /** Player is away (tab hidden / window blurred): heroes stop working. */
   private away = false;
@@ -64,14 +65,14 @@ export class TreasureScene extends Phaser.Scene {
     this.syncing = false;
     this.awaitingStage = false;
     this.stageHoldUntil = 0;
-    this.demo = this.session ? createSessionState(this.session) : createDemoState();
+    this.live = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
     if (this.session) {
       this.restoreHeroes();
       useGameStore.getState().setSaveStatus("saved");
     }
     this.restorePending();
-    this.apply(this.demo, []);
+    this.apply(this.live, []);
     // Save immediately when the player leaves the tab or page.
     const flushNow = () => {
       if (document.hidden) this.flush();
@@ -91,12 +92,12 @@ export class TreasureScene extends Phaser.Scene {
       this.away = away;
       useGameStore.getState().setGamePaused(away);
       const now = Date.now();
-      if (this.demo) for (const h of Object.values(this.demo.heroes)) if (h.onMap) h.recoveryAt = now;
+      if (this.live) for (const h of Object.values(this.live.heroes)) if (h.onMap) h.recoveryAt = now;
       if (away) {
         this.heroes.forEach((s) => s.setMoving(false));
         this.flush();
       } else {
-        this.demoElapsed = 0;
+        this.tickElapsed = 0;
         this.receivedAt = this.time.now;
       }
     };
@@ -120,7 +121,7 @@ export class TreasureScene extends Phaser.Scene {
       window.removeEventListener("pagehide", onPageHide);
       this.flush();
       this.clearEntities();
-      this.demo = null;
+      this.live = null;
     });
   }
   /**
@@ -128,9 +129,9 @@ export class TreasureScene extends Phaser.Scene {
    * createSessionState); clamp values and resume recovery from those stamps.
    */
   private restoreHeroes(): void {
-    if (!this.demo) return;
+    if (!this.live) return;
     const now = Date.now();
-    for (const hero of Object.values(this.demo.heroes)) {
+    for (const hero of Object.values(this.live.heroes)) {
       hero.energy = Math.min(hero.maxEnergy, Math.max(0, hero.energy));
       hero.onMap = hero.onMap && hero.energy >= 1;
       // A hero that was working starts resting only now, not from its old stamp.
@@ -138,17 +139,17 @@ export class TreasureScene extends Phaser.Scene {
       hero.path = [];
       hero.target = null;
     }
-    materializeRecovery(this.demo, now);
+    materializeRecovery(this.live, now);
   }
   /** Picks up heroes minted while the board is running; they arrive rested and off the map. */
   private adoptNewHeroes(): void {
     const latest = useGameStore.getState().session;
-    if (!this.demo || !this.session || !latest || latest.playerId !== this.session.playerId) return;
+    if (!this.live || !this.session || !latest || latest.playerId !== this.session.playerId) return;
     if (latest.heroes.length === this.session.heroes.length) return;
     const now = Date.now();
     for (const h of latest.heroes) {
-      if (this.demo.heroes[h.id]) continue;
-      this.demo.heroes[h.id] = {
+      if (this.live.heroes[h.id]) continue;
+      this.live.heroes[h.id] = {
         ...h,
         mintedNumber: h.mintedNumber ?? 0,
         owner: latest.playerId,
@@ -167,17 +168,17 @@ export class TreasureScene extends Phaser.Scene {
     this.session = latest;
   }
   private runCommands(): void {
-    if (!this.demo) return;
+    if (!this.live) return;
     const store = useGameStore.getState();
     for (const command of store.takeCommands()) {
-      const error = applyCommand(this.demo, command, Date.now());
+      const error = applyCommand(this.live, command, Date.now());
       if (error) store.setDeployError(DEPLOY_ERRORS[error] ?? "Could not update hero");
     }
   }
   private lastHeroSync = 0;
   private publishRoster(): void {
-    if (!this.demo || !this.session) return;
-    const heroes = Object.values(this.demo.heroes);
+    if (!this.live || !this.session) return;
+    const heroes = Object.values(this.live.heroes);
     const byId = new Map(heroes.map((h) => [h.id, h]));
     useGameStore.getState().setRoster(
       this.session.heroes.map((h) => {
@@ -189,21 +190,24 @@ export class TreasureScene extends Phaser.Scene {
   }
   /** Persists live hero energy/deploy state to the server (throttled unless forced). */
   private syncHeroes(heroes: GameState["heroes"][string][], force: boolean): void {
-    const heroesSyncer = useGameStore.getState().heroesSyncer;
+    const store = useGameStore.getState();
+    const payload = heroes.map((h) => ({
+      id: h.id,
+      energy: Math.round(h.energy),
+      onMap: h.onMap,
+      recoveryAt: Math.round(h.recoveryAt),
+    }));
+    // Keep the cached session current so returning to Play resumes this exact state.
+    store.patchSessionHeroes(payload);
+    const heroesSyncer = store.heroesSyncer;
     if (!heroesSyncer) return;
     const now = Date.now();
     if (!force && now - this.lastHeroSync < HERO_SYNC_INTERVAL_MS) return;
     this.lastHeroSync = now;
-    heroesSyncer(
-      heroes.map((h) => ({
-        id: h.id,
-        energy: Math.round(h.energy),
-        onMap: h.onMap,
-        recoveryAt: Math.round(h.recoveryAt),
-      })),
-    ).catch(() => {
-      /* hero state save failed — the next interval retries */
-    });
+    store.beginSave();
+    heroesSyncer(payload)
+      .then(() => useGameStore.getState().endSave(true))
+      .catch(() => useGameStore.getState().endSave(false));
   }
   private clearEntities(): void {
     this.heroes.forEach((h) => h.destroy());
@@ -303,12 +307,12 @@ export class TreasureScene extends Phaser.Scene {
   }
   /** Remember blocks destroyed since the last confirmed server sync. */
   private trackDestroyed(effects: GameEffect[]): void {
-    if (!this.demo) return;
+    if (!this.live) return;
     for (const effect of effects) {
       if (effect.type === "explosion")
         for (const tile of effect.tiles) {
           const key = `${tile.x},${tile.y}`;
-          const node = this.demo.nodes[key];
+          const node = this.live.nodes[key];
           // Only blocks destroyed by this blast — not tiles cleared long ago.
           if (node?.destroyed && !this.reportedKeys.has(key)) {
             this.reportedKeys.add(key);
@@ -324,7 +328,7 @@ export class TreasureScene extends Phaser.Scene {
   }
 
   private pendingStorageKey(): string | null {
-    return this.demo && this.session ? `chainframe.pending:${this.session.playerId}:${this.demo.seed}` : null;
+    return this.live && this.session ? `chainframe.pending:${this.session.playerId}:${this.live.seed}` : null;
   }
   /** Unsaved blocks survive a refresh/crash: kept locally until the server confirms them. */
   private persistPending(): void {
@@ -339,12 +343,12 @@ export class TreasureScene extends Phaser.Scene {
   }
   private restorePending(): void {
     const key = this.pendingStorageKey();
-    if (!key || !this.demo) return;
+    if (!key || !this.live) return;
     try {
       const saved = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown;
       if (!Array.isArray(saved)) return;
       for (const k of saved) {
-        const node = typeof k === "string" ? this.demo.nodes[k] : undefined;
+        const node = typeof k === "string" ? this.live.nodes[k] : undefined;
         if (!node || node.destroyed) continue;
         node.destroyed = true;
         this.pendingKeys.add(k);
@@ -357,7 +361,7 @@ export class TreasureScene extends Phaser.Scene {
   /** Send pending blocks and hero state right away (tab hidden, leaving the page). */
   private flush(): void {
     if (!this.session) return;
-    if (this.demo) this.syncHeroes(Object.values(this.demo.heroes), true);
+    if (this.live) this.syncHeroes(Object.values(this.live.heroes), true);
     if (!this.pendingKeys.size) return;
     this.syncElapsed = SYNC_INTERVAL_MS;
     this.tickSync(0);
@@ -368,32 +372,43 @@ export class TreasureScene extends Phaser.Scene {
     this.syncElapsed += delta;
     if (this.syncElapsed < SYNC_INTERVAL_MS || this.syncing) return;
     const syncer = useGameStore.getState().syncer;
-    const state = this.demo;
+    const state = this.live;
     if (!syncer || !state || (!this.pendingKeys.size && !this.awaitingStage)) return;
     this.syncElapsed = 0;
     this.syncing = true;
     const sent = [...this.pendingKeys];
-    useGameStore.getState().setSaveStatus("saving");
+    useGameStore.getState().beginSave();
     syncer(state.seed, sent)
       .then((result) => {
-        if (!this.demo) return;
-        // Only drop keys the server now has. Real blocks it deferred (e.g. the
-        // chest rate limit) stay queued, otherwise the last chest can be lost
-        // and the stage never clears.
-        const saved = new Set(result.destroyedNodes);
-        for (const key of sent) if (result.seed !== this.demo.seed || saved.has(key)) this.pendingKeys.delete(key);
-        this.persistPending();
-        if (result.seed === this.demo.seed && this.pendingKeys.size) this.syncElapsed = SYNC_INTERVAL_MS - 1000;
-        this.demo.coins = result.coins;
-        // Cache the server-confirmed map so leaving and returning to Play
-        // resumes this stage instead of the stale one loaded at sign-in.
+        // Always cache the server-confirmed map, even if the scene has shut down
+        // (player left Play) — otherwise returning would show stale progress.
         useGameStore.getState().patchSession({
           coins: result.coins,
           stage: result.stage,
           seed: result.seed,
           destroyedNodes: result.destroyedNodes,
         });
-        if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
+        useGameStore.getState().endSave(true);
+        if (!this.live || this.live !== state) {
+          try {
+            const k = this.session && `chainframe.pending:${this.session.playerId}:${state.seed}`;
+            const saved = new Set(result.destroyedNodes);
+            const left = sent.filter((x) => result.seed === state.seed && !saved.has(x));
+            if (k) left.length ? localStorage.setItem(k, JSON.stringify(left)) : localStorage.removeItem(k);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        // Only drop keys the server now has. Real blocks it deferred (e.g. the
+        // chest rate limit) stay queued, otherwise the last chest can be lost
+        // and the stage never clears.
+        const saved = new Set(result.destroyedNodes);
+        for (const key of sent) if (result.seed !== this.live.seed || saved.has(key)) this.pendingKeys.delete(key);
+        this.persistPending();
+        if (result.seed === this.live.seed && this.pendingKeys.size) this.syncElapsed = SYNC_INTERVAL_MS - 1000;
+        this.live.coins = result.coins;
+        if (result.stage !== this.live.stage || result.seed !== this.live.seed) {
           // Server confirmed the stage (or we drifted): hold the board frozen
           // briefly so the player sees the verification, then rebuild from the
           // server's official map. The pending list belongs to the old seed.
@@ -401,12 +416,12 @@ export class TreasureScene extends Phaser.Scene {
           this.pendingKeys.clear();
           this.reportedKeys = new Set(result.destroyedNodes);
           this.persistPending();
-          const previous = this.demo.heroes;
-          const playerId = this.demo.playerId;
+          const previous = this.live.heroes;
+          const playerId = this.live.playerId;
           this.stageHoldUntil = this.time.now + STAGE_CLEAR_PAUSE_MS;
           this.time.delayedCall(STAGE_CLEAR_PAUSE_MS, () => {
             if (!this.session || !this.scene.isActive()) return;
-            this.demo = createSessionState({
+            this.live = createSessionState({
               playerId,
               coins: result.coins,
               stage: result.stage,
@@ -415,7 +430,7 @@ export class TreasureScene extends Phaser.Scene {
               heroes: this.session.heroes,
             });
             // Keep each hero's energy and deploy state across the new map.
-            for (const hero of Object.values(this.demo.heroes)) {
+            for (const hero of Object.values(this.live.heroes)) {
               const old = previous[hero.id];
               if (!old) continue;
               hero.energy = old.energy;
@@ -423,19 +438,18 @@ export class TreasureScene extends Phaser.Scene {
               hero.recoveryAt = old.recoveryAt;
             }
             this.stageHoldUntil = 0;
-            this.apply(this.demo, []);
+            this.apply(this.live, []);
             useGameStore.getState().setStageClearing(false);
           });
         } else {
           useGameStore.getState().setStats({
             coins: result.coins,
-            stage: this.demo.stage,
-            heroesOnMap: Object.values(this.demo.heroes).filter((h) => h.onMap).length,
+            stage: this.live.stage,
+            heroesOnMap: Object.values(this.live.heroes).filter((h) => h.onMap).length,
           });
         }
-        useGameStore.getState().setSaveStatus("saved");
       })
-      .catch(() => useGameStore.getState().setSaveStatus("error"))
+      .catch(() => useGameStore.getState().endSave(false))
       .finally(() => {
         this.syncing = false;
       });
@@ -450,28 +464,28 @@ export class TreasureScene extends Phaser.Scene {
     // they never count away time as rest.
     if (this.away && this.session) {
       const now = Date.now();
-      if (this.demo) for (const h of Object.values(this.demo.heroes)) if (h.onMap) h.recoveryAt = now;
+      if (this.live) for (const h of Object.values(this.live.heroes)) if (h.onMap) h.recoveryAt = now;
       this.heroes.forEach((s) => s.setMoving(false));
       return;
     }
-    if (this.demo) {
-      this.demoElapsed += delta;
-      if (this.demoElapsed >= TICK_MS && !this.awaitingStage && this.time.now >= this.stageHoldUntil) {
-        this.demoElapsed = 0;
+    if (this.live) {
+      this.tickElapsed += delta;
+      if (this.tickElapsed >= TICK_MS && !this.awaitingStage && this.time.now >= this.stageHoldUntil) {
+        this.tickElapsed = 0;
         if (this.session) {
           this.adoptNewHeroes();
           this.runCommands();
-          materializeRecovery(this.demo, Date.now());
+          materializeRecovery(this.live, Date.now());
         } else {
           // Homepage backdrop: heroes never tire.
-          for (const hero of Object.values(this.demo.heroes)) {
+          for (const hero of Object.values(this.live.heroes)) {
             hero.energy = hero.maxEnergy;
             hero.onMap = true;
           }
         }
-        this.demo.daily.used = 0;
-        const result = stepSimulation(this.demo, TICK_MS, Date.now());
-        this.demo = result.state;
+        this.live.daily.used = 0;
+        const result = stepSimulation(this.live, TICK_MS, Date.now());
+        this.live = result.state;
         if (this.session) this.trackDestroyed(result.effects);
         this.apply(result.state, result.effects);
         if (this.session) this.publishRoster();
@@ -481,7 +495,7 @@ export class TreasureScene extends Phaser.Scene {
         if (
           this.session &&
           !this.awaitingStage &&
-          !Object.values(this.demo.nodes).some((n) => n.kind === "chest" && !n.destroyed)
+          !Object.values(this.live.nodes).some((n) => n.kind === "chest" && !n.destroyed)
         ) {
           this.awaitingStage = true;
           this.syncElapsed = SYNC_INTERVAL_MS;

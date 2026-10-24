@@ -98,7 +98,7 @@ export function createSessionState(session: PlayerSession, now: number = Date.no
       level: 1,
       // Server-persisted live state; new heroes start rested and off the map.
       energy: Math.min(h.maxEnergy, Math.max(0, h.energy ?? h.maxEnergy)),
-      onMap: h.onMap ?? true,
+      onMap: h.onMap ?? false,
       recoveryAt: h.recoveryAt ?? now,
       market: { listed: false, price: 0, seller: null, created: 0, sold: 0 },
       x: 1,
