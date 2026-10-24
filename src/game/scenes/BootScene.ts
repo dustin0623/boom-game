@@ -26,7 +26,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     for (const rarity of Object.values(ChestRarity)) {
-      this.load.image(CHEST_TEXTURE[rarity], `/assets/chests/${CHEST_TEXTURE[rarity]}.png`);
+      this.load.image(CHEST_TEXTURE[rarity], `/game/items/chests/${CHEST_TEXTURE[rarity]}.png`);
     }
     this.load.image("bush", "/game/tiles/bush.png");
     this.load.spritesheet("boom", "/game/effects/boom.png", {
