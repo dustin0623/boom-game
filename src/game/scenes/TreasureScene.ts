@@ -5,6 +5,7 @@ import { Bomb } from "../entities/Bomb";
 import { TILE_SIZE } from "@/game/data/TileTypes";
 import { HeroRarity, HeroType } from "@/game/data/HeroRarity";
 import { useGameStore } from "@/features/stores/game.store";
+import { useSettingsStore } from "@/features/stores/settings.store";
 import type { GameEffect, GameState } from "@/lib/game/dungeon/types";
 import { applyCommand, stepSimulation } from "@/lib/game/dungeon/simulation";
 import { materializeRecovery } from "@/lib/game/dungeon/rules";
@@ -284,8 +285,11 @@ export class TreasureScene extends Phaser.Scene {
       }
       // Never queue a boom while the tab is hidden — Phaser pauses audio on
       // blur and would replay every queued explosion simultaneously on return.
-      if (this.cache.audio.exists("boom_sfx") && !document.hidden)
-        this.sound.play("boom_sfx", { volume: GAME_CONFIG.EXPLOSION.SFX_VOLUME });
+      const audio = useSettingsStore.getState();
+      if (this.cache.audio.exists("boom_sfx") && !document.hidden && audio.soundOn && audio.bombVolume > 0)
+        this.sound.play("boom_sfx", {
+          volume: GAME_CONFIG.EXPLOSION.SFX_VOLUME * 2 * (audio.bombVolume / 100),
+        });
       this.cameras.main.shake(
         GAME_CONFIG.EXPLOSION.SHAKE_DURATION_MS,
         GAME_CONFIG.EXPLOSION.SHAKE_BASE * GAME_CONFIG.EXPLOSION.SHAKE_SCALE,
