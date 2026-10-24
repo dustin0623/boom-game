@@ -131,7 +131,6 @@ export class TreasureScene extends Phaser.Scene {
     }
   }
   override update(_time: number, delta: number): void {
-    if (useGameStore.getState().paused) return;
     if (this.demo) {
       this.demoElapsed += delta;
       if (this.demoElapsed >= TICK_MS) {
