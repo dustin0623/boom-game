@@ -44,6 +44,8 @@ export class TreasureScene extends Phaser.Scene {
   private away = false;
   private session: PlayerSession | null = null;
   private pendingKeys = new Set<string>();
+  /** Blocks already queued or saved on the current map (avoids resending cleared tiles). */
+  private reportedKeys = new Set<string>();
   private syncElapsed = 0;
   private syncing = false;
   private awaitingStage = false;
@@ -303,9 +305,17 @@ export class TreasureScene extends Phaser.Scene {
       if (effect.type === "explosion")
         for (const tile of effect.tiles) {
           const key = `${tile.x},${tile.y}`;
-          if (this.demo.nodes[key]?.destroyed) this.pendingKeys.add(key);
+          const node = this.demo.nodes[key];
+          // Only blocks destroyed by this blast — not tiles cleared long ago.
+          if (node?.destroyed && !this.reportedKeys.has(key)) {
+            this.reportedKeys.add(key);
+            this.pendingKeys.add(key);
+          }
         }
-      else if (effect.type === "reward") this.pendingKeys.add(effect.nodeKey);
+      else if (effect.type === "reward" && !this.reportedKeys.has(effect.nodeKey)) {
+        this.reportedKeys.add(effect.nodeKey);
+        this.pendingKeys.add(effect.nodeKey);
+      }
     }
     if (effects.length) this.persistPending();
   }
@@ -363,9 +373,14 @@ export class TreasureScene extends Phaser.Scene {
     useGameStore.getState().setSaveStatus("saving");
     syncer(state.seed, sent)
       .then((result) => {
-        for (const key of sent) this.pendingKeys.delete(key);
-        this.persistPending();
         if (!this.demo) return;
+        // Only drop keys the server now has. Real blocks it deferred (e.g. the
+        // chest rate limit) stay queued, otherwise the last chest can be lost
+        // and the stage never clears.
+        const saved = new Set(result.destroyedNodes);
+        for (const key of sent) if (result.seed !== this.demo.seed || saved.has(key)) this.pendingKeys.delete(key);
+        this.persistPending();
+        if (result.seed === this.demo.seed && this.pendingKeys.size) this.syncElapsed = SYNC_INTERVAL_MS - 1000;
         this.demo.coins = result.coins;
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
           // Server confirmed the stage (or we drifted): hold the board frozen
