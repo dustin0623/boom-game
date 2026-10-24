@@ -56,6 +56,8 @@ export class TreasureScene extends Phaser.Scene {
   create(): void {
     this.map = new MapManager(this);
     this.session = useGameStore.getState().session;
+    // Test bench only: expose the scene so /test-game can fast-forward a stage.
+    if (this.session?.playerId === "test-player") (window as unknown as { __scene?: unknown }).__scene = this;
     this.pendingKeys.clear();
     this.reportedKeys = new Set<string>();
     this.syncElapsed = 0;
