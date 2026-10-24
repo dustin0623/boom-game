@@ -148,6 +148,7 @@ export function SidebarNav({
   onToggleCollapse?: () => void;
 }) {
   const pathname = useLocation({ select: (l) => l.pathname });
+  const player = useAuthStore((s) => s.player);
   return (
     <div className="flex h-full flex-col">
       <div className="group/brand relative flex items-center gap-2 px-3 py-3">
@@ -177,6 +178,7 @@ export function SidebarNav({
 
       <AccountRow collapsed={collapsed} />
       <div className="mx-3 mb-3 border-t border-sidebar-border/60" />
+      {player && <BalancePanel collapsed={collapsed} />}
 
       <nav className="flex flex-col gap-0.5 px-2">
         {NAV_ITEMS.map((item) => {
