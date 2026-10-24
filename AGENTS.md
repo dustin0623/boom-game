@@ -21,6 +21,7 @@ This file provides the operational rules that AI agents must follow when modifyi
 - Game sessions are token-authenticated: login issues a random token, the database stores only its SHA-256 hash, and every game server function validates playerId+token via `requirePlayer`/`loadPlayer` in `src/lib/game/session/player.server.ts` (why: no Supabase Auth users; wallet signature is the identity).
 - The play scene runs locally and checkpoints: TreasureScene buffers destroyed block keys (mirrored to localStorage per player+seed until confirmed), flushes every ~4s and immediately on tab hide/page leave; `syncProgress` validates claims against the seeded map, then the `save_progress` DB function credits only not-yet-saved keys atomically and owns stage advancement (why: anti-cheat, no lost or double-paid progress, no WebSocket server).
 - Heroes are minted with in-game coins (Boom Miner rules, no wallet transaction): server rolls rarity/type/attributes, `mint_heroes` DB function debits coins, assigns global sequential mint numbers and appends to the roster atomically; withdrawals enqueue `transactions_pending` rows for a future worker (why: only on-chain payout needs async processing).
+- Stage transitions keep the simulation gate closed until the confirmed replacement map is installed, and pass live hero deployment/energy into map creation before spawning (why: Phaser update can run before the transition timer at its deadline, re-freezing an old cleared map).
 
 ---
 
