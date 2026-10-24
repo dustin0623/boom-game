@@ -8,7 +8,7 @@ export interface NavItem {
 }
 
 /** Paths anyone can open without signing in. Everything else needs a wallet session. */
-export const PUBLIC_PAGE_PATHS = ["/"];
+export const PUBLIC_PAGE_PATHS = ["/", "/test-game"];
 
 export const NAV_ITEMS: NavItem[] = [
   { to: "/play", label: "Play", icon: Gamepad2 },

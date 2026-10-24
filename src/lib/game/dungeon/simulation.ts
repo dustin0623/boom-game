@@ -315,7 +315,9 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     const effect = result.effects.find((e) => e.type === "reward" && e.id === reward.id);
     if (effect?.type === "reward") effect.amount = reward.amount;
   }
-  if (advanceStage(state)) {
+  // Saved games: only the server picks the next stage/seed. Advancing locally
+  // rolls a random seed the server rejects, looping the player back a stage.
+  if (state.playerId === "demo" && advanceStage(state)) {
     result.effects.push({ type: "stage", id: state.mapId, stage: state.stage });
     result.durable = true;
     return result;
