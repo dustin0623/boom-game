@@ -56,10 +56,10 @@ export function HeroCard({ hero, footer, children }: { hero: SessionHero; footer
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 text-[11px]">
+      <div className="grid grid-cols-3 gap-1.5 text-[11px]">
         {stats.map(({ icon: Icon, label, value }) => (
-          <span key={label} className="inline-flex items-center gap-1 rounded-md bg-secondary/60 px-1.5 py-0.5">
-            <Icon className="size-3 text-muted-foreground" />
+          <span key={label} className="inline-flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-md bg-secondary/60 px-1.5 py-1">
+            <Icon className="size-3 shrink-0 text-muted-foreground" />
             {label} <span className="font-semibold text-success">{value}</span>
           </span>
         ))}
