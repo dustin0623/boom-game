@@ -161,7 +161,7 @@ export function SettingsModal({ open, onOpenChange }: Controlled) {
               max={100}
               step={5}
               disabled={!soundOn}
-              onValueChange={([v]) => setBombVolume(v)}
+              onValueChange={([v]) => setBombVolume(v ?? 0)}
               aria-label="Bomb volume"
             />
           </div>
