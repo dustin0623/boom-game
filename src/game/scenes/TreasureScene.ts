@@ -69,7 +69,7 @@ export class TreasureScene extends Phaser.Scene {
     useGameStore.getState().reset();
     if (this.session) {
       this.restoreHeroes();
-      useGameStore.getState().setSaveStatus("saved");
+      if (!useGameStore.getState().inFlight) useGameStore.getState().setSaveStatus("saved");
     }
     this.restorePending();
     this.apply(this.live, []);
