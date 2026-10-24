@@ -52,7 +52,10 @@ function Page() {
       const result = await mintHeroes({ data: { playerId: player.id, token, count: qty } });
       setCoins(result.coins);
       setMinted(result.heroes);
-      useGameStore.getState().addHeroes(result.heroes);
+      const store = useGameStore.getState();
+      store.addHeroes(result.heroes);
+      store.patchSession({ coins: result.coins });
+      store.setStats({ coins: result.coins, stage: store.stage, heroesOnMap: store.heroesOnMap });
       setMessage(`${result.heroes.length} hero${result.heroes.length > 1 ? "es" : ""} joined your crew.`);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Mint failed");

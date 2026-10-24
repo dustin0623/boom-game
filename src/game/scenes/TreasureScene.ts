@@ -145,6 +145,11 @@ export class TreasureScene extends Phaser.Scene {
   private adoptNewHeroes(): void {
     const latest = useGameStore.getState().session;
     if (!this.live || !this.session || !latest || latest.playerId !== this.session.playerId) return;
+    // Coins spent outside the scene (e.g. minting in the Shop) are server-confirmed; adopt them.
+    if (latest.coins !== this.session.coins) {
+      this.live.coins = latest.coins;
+      this.session = { ...this.session, coins: latest.coins };
+    }
     if (latest.heroes.length === this.session.heroes.length) return;
     const now = Date.now();
     for (const h of latest.heroes) {
