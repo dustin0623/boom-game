@@ -85,7 +85,10 @@ export class TreasureScene extends Phaser.Scene {
       if (!this.session || this.away === away) return;
       this.away = away;
       useGameStore.getState().setGamePaused(away);
+      const now = Date.now();
+      if (this.demo) for (const h of Object.values(this.demo.heroes)) if (h.onMap) h.recoveryAt = now;
       if (away) {
+        this.heroes.forEach((s) => s.setMoving(false));
         this.flush();
       } else {
         this.demoElapsed = 0;
@@ -415,6 +418,15 @@ export class TreasureScene extends Phaser.Scene {
     // Clamp delta so a throttled background tab doesn't inject a multi-second
     // spike into the loop on the first frame back.
     delta = Math.min(delta, 250);
+    // Player away: freeze everything. No ticks, no walking, no bombs, no stamina
+    // change. Deployed heroes stay on the map and keep their rest clock pinned so
+    // they never count away time as rest.
+    if (this.away && this.session) {
+      const now = Date.now();
+      if (this.demo) for (const h of Object.values(this.demo.heroes)) if (h.onMap) h.recoveryAt = now;
+      this.heroes.forEach((s) => s.setMoving(false));
+      return;
+    }
     if (this.demo) {
       this.demoElapsed += delta;
       if (this.demoElapsed >= TICK_MS && !this.awaitingStage && this.time.now >= this.stageHoldUntil) {
