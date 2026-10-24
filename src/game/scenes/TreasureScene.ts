@@ -385,6 +385,14 @@ export class TreasureScene extends Phaser.Scene {
         this.persistPending();
         if (result.seed === this.demo.seed && this.pendingKeys.size) this.syncElapsed = SYNC_INTERVAL_MS - 1000;
         this.demo.coins = result.coins;
+        // Cache the server-confirmed map so leaving and returning to Play
+        // resumes this stage instead of the stale one loaded at sign-in.
+        useGameStore.getState().patchSession({
+          coins: result.coins,
+          stage: result.stage,
+          seed: result.seed,
+          destroyedNodes: result.destroyedNodes,
+        });
         if (result.stage !== this.demo.stage || result.seed !== this.demo.seed) {
           // Server confirmed the stage (or we drifted): hold the board frozen
           // briefly so the player sees the verification, then rebuild from the

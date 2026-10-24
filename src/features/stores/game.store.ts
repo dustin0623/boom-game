@@ -61,6 +61,8 @@ interface GameRuntimeState {
   setDeployError: (error: string | null) => void;
   /** Appends freshly minted heroes so the play scene and drawer pick them up instantly. */
   addHeroes: (heroes: SessionHero[]) => void;
+  /** Keeps the cached session in step with the server's confirmed map so re-opening Play resumes it. */
+  patchSession: (patch: Partial<Pick<PlayerSession, "coins" | "stage" | "seed" | "destroyedNodes">>) => void;
   reset: () => void;
 }
 
@@ -98,5 +100,6 @@ export const useGameStore = create<GameRuntimeState>((set, get) => ({
       if (!fresh.length) return {};
       return { session: { ...s.session, heroes: [...s.session.heroes, ...fresh] } };
     }),
+  patchSession: (patch) => set((s) => (s.session ? { session: { ...s.session, ...patch } } : {})),
   reset: () => set({ coins: 0, stage: 1, heroesOnMap: 0, roster: [], commands: [], stageClearing: false }),
 }));

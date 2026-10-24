@@ -95,6 +95,9 @@ function search(
     return path.reverse();
   };
   let best: { p: Point; target: string; score: number } | null = null;
+  // Best spot with no escape route: used only when the hero is boxed in (e.g. a
+  // fresh, dense map). Bombs never hurt heroes, so bombing in place beats freezing.
+  let trapped: { p: Point; target: string; score: number } | null = null;
   for (let i = 0; i < queue.length; i++) {
     const p = queue[i]!;
     const d = dist.get(keyOf(p))!;
@@ -119,11 +122,10 @@ function search(
       }
       if (target && value > 0) {
         const score = value / (d + 2);
-        if (
-          (!best || score > best.score) &&
-          canEscape(state, p, new Set(blast.map(keyOf)), danger)
-        )
-          best = { p, target, score };
+        if (!best || score > best.score) {
+          if (canEscape(state, p, new Set(blast.map(keyOf)), danger)) best = { p, target, score };
+          else if (!trapped || score > trapped.score) trapped = { p, target, score };
+        }
       }
     }
     for (const dir of DIRECTIONS) {
@@ -139,10 +141,10 @@ function search(
   const choices = queue.filter(
     (p) => !danger.has(keyOf(p)) && Math.abs(p.x - start.x) + Math.abs(p.y - start.y) >= 3,
   );
-  return {
-    path: choices.length ? pathTo(choices[Math.floor(random(state) * choices.length)]!) : [],
-    target: null,
-  };
+  if (choices.length)
+    return { path: pathTo(choices[Math.floor(random(state) * choices.length)]!), target: null };
+  if (trapped) return { path: pathTo(trapped.p), target: trapped.target };
+  return { path: [], target: null };
 }
 function escape(state: GameState, hero: GameHero, danger: Set<string>): Point[] {
   const start = { x: Math.round(hero.x), y: Math.round(hero.y) };
