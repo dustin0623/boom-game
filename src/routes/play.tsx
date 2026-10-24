@@ -34,7 +34,7 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Coins; label: string;
 
 function PlayPage() {
   const connected = useAuthStore((s) => s.player !== null);
-  const { coins, stage, heroesOnMap, paused, setPaused } = useGameStore();
+  const { coins, stage, heroesOnMap } = useGameStore();
 
   return (
     <div className="space-y-4">
@@ -42,14 +42,10 @@ function PlayPage() {
         title="Play"
         description={connected ? "Your bombers are clearing the mine." : "Demo mode — progress is not saved."}
       />
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-3">
         <Stat icon={Coins} label="Coins" value={coins.toLocaleString()} />
         <Stat icon={Layers} label="Stage" value={stage} />
         <Stat icon={Users} label="Bombers" value={heroesOnMap} />
-        <Button variant="outline" className="h-full gap-2" onClick={() => setPaused(!paused)}>
-          {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-          {paused ? "Resume" : "Pause"}
-        </Button>
       </div>
       <div className="overflow-hidden rounded-xl border border-primary/25 bg-card shadow-[0_0_40px_-12px_var(--primary)]">
         <ClientOnly fallback={<div className="aspect-[41/25] w-full animate-pulse bg-muted" />}>
