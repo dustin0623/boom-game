@@ -1,0 +1,5 @@
+-- Intentionally empty.
+-- This migration set was rescaffolded after the project was remixed; the
+-- copied schema from the original project was removed so the new project's
+-- database starts from a clean slate. New schema changes are applied on top
+-- of this empty baseline.
