@@ -93,7 +93,6 @@ function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <EnterMineButton />
-            <WalletButton />
           </div>
         </div>
       </section>
@@ -168,7 +167,6 @@ function LandingPage() {
         <p className="mt-2 max-w-md text-sm text-muted-foreground">Connect your wallet with Xaman and your crew starts mining right away.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <EnterMineButton />
-          <WalletButton />
         </div>
       </section>
     </div>
