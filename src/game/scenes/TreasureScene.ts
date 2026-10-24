@@ -40,6 +40,10 @@ export class TreasureScene extends Phaser.Scene {
   create(): void {
     this.map = new MapManager(this);
     this.session = useGameStore.getState().session;
+    this.pendingKeys.clear();
+    this.syncElapsed = 0;
+    this.syncing = false;
+    this.awaitingStage = false;
     this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
     if (this.session) useGameStore.getState().setSaveStatus("saved");
