@@ -302,10 +302,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      buy_chest: {
-        Args: { p_item_id: string; p_player_id: string; p_price: number }
-        Returns: Json
-      }
       claim_pending_transactions: {
         Args: { p_limit?: number }
         Returns: {
@@ -327,10 +323,6 @@ export type Database = {
       }
       mint_heroes: {
         Args: { p_cost: number; p_heroes: Json; p_player_id: string }
-        Returns: Json
-      }
-      open_chest: {
-        Args: { p_hero: Json; p_item_id: string; p_player_id: string }
         Returns: Json
       }
       request_withdrawal: {
