@@ -6,7 +6,20 @@ import { TILE_SIZE } from "@/game/data/TileTypes";
 import { HeroRarity, HeroType } from "@/game/data/HeroRarity";
 import { useGameStore } from "@/features/stores/game.store";
 import type { GameEffect, GameState } from "@/lib/game/dungeon/types";
-import { stepSimulation } from "@/lib/game/dungeon/simulation";
+import { applyCommand, stepSimulation } from "@/lib/game/dungeon/simulation";
+import { materializeRecovery } from "@/lib/game/dungeon/rules";
+
+const DEPLOY_ERRORS: Record<string, string> = {
+  INSUFFICIENT_ENERGY: "Needs at least 50% energy to deploy",
+  MAP_FULL: "The map is full — recall a hero first",
+  HERO_UNAVAILABLE: "That hero is not available",
+};
+
+interface SavedHeroState {
+  energy: number;
+  onMap: boolean;
+  recoveryAt: number;
+}
 import { STATIC_ANIMS } from "../engine/config/AnimationConfig";
 import { GAME_CONFIG } from "../engine/config/GameConfig";
 import { createDemoState, createSessionState } from "../demo/demo";
@@ -46,7 +59,10 @@ export class TreasureScene extends Phaser.Scene {
     this.awaitingStage = false;
     this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
-    if (this.session) useGameStore.getState().setSaveStatus("saved");
+    if (this.session) {
+      this.restoreHeroes();
+      useGameStore.getState().setSaveStatus("saved");
+    }
     this.restorePending();
     this.apply(this.demo, []);
     // Save immediately when the player leaves the tab or page.
@@ -271,9 +287,15 @@ export class TreasureScene extends Phaser.Scene {
       this.demoElapsed += delta;
       if (this.demoElapsed >= TICK_MS && !this.awaitingStage) {
         this.demoElapsed = 0;
-        for (const hero of Object.values(this.demo.heroes)) {
-          hero.energy = hero.maxEnergy;
-          hero.onMap = true;
+        if (this.session) {
+          this.runCommands();
+          materializeRecovery(this.demo, Date.now());
+        } else {
+          // Homepage backdrop: heroes never tire.
+          for (const hero of Object.values(this.demo.heroes)) {
+            hero.energy = hero.maxEnergy;
+            hero.onMap = true;
+          }
         }
         this.demo.daily.used = 0;
         const result = stepSimulation(this.demo, TICK_MS, Date.now());
