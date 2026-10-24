@@ -9,11 +9,17 @@ import type { GameEffect, GameState } from "@/lib/game/dungeon/types";
 import { stepSimulation } from "@/lib/game/dungeon/simulation";
 import { STATIC_ANIMS } from "../engine/config/AnimationConfig";
 import { GAME_CONFIG } from "../engine/config/GameConfig";
-import { createDemoState } from "../demo/demo";
+import { createDemoState, createSessionState } from "../demo/demo";
+import type { PlayerSession } from "@/lib/game/session/types";
 
 const TICK_MS = 100;
+const SYNC_INTERVAL_MS = 4000;
 
-/** Renders the local demo simulation. Live play will feed state from the backend later. */
+/**
+ * Renders the local simulation. With a cloud session in the game store the
+ * board is built from saved progress and destroyed blocks are synced to the
+ * server every few seconds; without one (homepage backdrop) it runs unsaved.
+ */
 export class TreasureScene extends Phaser.Scene {
   private map!: MapManager;
   private state: GameState | null = null;
@@ -23,13 +29,20 @@ export class TreasureScene extends Phaser.Scene {
   private demo: GameState | null = null;
   private demoElapsed = 0;
   private receivedAt = 0;
+  private session: PlayerSession | null = null;
+  private pendingKeys = new Set<string>();
+  private syncElapsed = 0;
+  private syncing = false;
+  private awaitingStage = false;
   constructor() {
     super("TreasureScene");
   }
   create(): void {
     this.map = new MapManager(this);
-    this.demo = createDemoState();
+    this.session = useGameStore.getState().session;
+    this.demo = this.session ? createSessionState(this.session) : createDemoState();
     useGameStore.getState().reset();
+    if (this.session) useGameStore.getState().setSaveStatus("saved");
     this.apply(this.demo, []);
     // Kill any boom one-shots the moment the tab is hidden so they cannot pile
     // up while Phaser's audio is paused and blast all at once on return.
@@ -145,7 +158,7 @@ export class TreasureScene extends Phaser.Scene {
     delta = Math.min(delta, 250);
     if (this.demo) {
       this.demoElapsed += delta;
-      if (this.demoElapsed >= TICK_MS) {
+      if (this.demoElapsed >= TICK_MS && !this.awaitingStage) {
         this.demoElapsed = 0;
         for (const hero of Object.values(this.demo.heroes)) {
           hero.energy = hero.maxEnergy;
@@ -154,8 +167,17 @@ export class TreasureScene extends Phaser.Scene {
         this.demo.daily.used = 0;
         const result = stepSimulation(this.demo, TICK_MS, Date.now());
         this.demo = result.state;
+        if (this.session) this.trackDestroyed(result.effects);
         this.apply(result.state, result.effects);
+        // In session mode the server owns stage advancement: once every chest
+        // is gone locally, stop the sim and wait for the server's new map.
+        if (
+          this.session &&
+          !Object.values(this.demo.nodes).some((n) => n.kind === "chest" && !n.destroyed)
+        )
+          this.awaitingStage = true;
       }
+      if (this.session) this.tickSync(delta);
     }
     if (!this.state || this.state.paused) return;
     for (const h of Object.values(this.state.heroes)) {
