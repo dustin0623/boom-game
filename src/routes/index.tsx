@@ -88,7 +88,7 @@ function LandingPage() {
       <section className="relative overflow-hidden rounded-2xl border border-primary/25">
         <div className="pointer-events-none absolute inset-0 opacity-60">
           <ClientOnly fallback={null}>
-            <PhaserGame className="h-full w-full [&_canvas]:!h-full [&_canvas]:!w-full [&_canvas]:object-cover" />
+            <PhaserGame muted className="h-full w-full [&_canvas]:!h-full [&_canvas]:!w-full [&_canvas]:object-cover" />
           </ClientOnly>
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
