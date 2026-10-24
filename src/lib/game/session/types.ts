@@ -12,6 +12,10 @@ export interface SessionHero {
   bombNumber: number;
   bombRange: number;
   maxEnergy: number;
+  /** Live state, persisted server-side in the heroes table. */
+  energy?: number;
+  onMap?: boolean;
+  recoveryAt?: number;
 }
 
 export interface PlayerSession {
