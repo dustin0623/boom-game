@@ -15,6 +15,13 @@ The architecture document is the source of truth for project structure and bound
 
 This file provides the operational rules that AI agents must follow when modifying the project.
 
+## Project-specific overrides (Chainframe)
+
+- Persistence is Lovable Cloud (PostgreSQL) via `supabaseAdmin`, not MongoDB/mock: players, player_inventory, transactions_pending/processed live in the cloud database; `playerRepository` is Supabase-backed and the mock store is legacy (why: game progress, shop and wallet must survive restarts).
+- Game sessions are token-authenticated: login issues a random token, the database stores only its SHA-256 hash, and every game server function validates playerId+token via `requirePlayer`/`loadPlayer` in `src/lib/game/session/player.server.ts` (why: no Supabase Auth users; wallet signature is the identity).
+- The play scene runs locally and checkpoints: TreasureScene simulates at 60 FPS, buffers destroyed block keys, and flushes to `syncProgress` every ~4s; the server validates claims against the seeded map and owns stage advancement (why: anti-cheat without a WebSocket server).
+- Shop purchases and chest opens are synchronous server functions with balance/quantity guards; withdrawals enqueue `transactions_pending` rows for a future worker (why: only on-chain payout needs async processing).
+
 ---
 
 # 1. Core Architecture
