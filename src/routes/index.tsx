@@ -54,31 +54,21 @@ const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
 ];
 
 function EnterMineButton({ size = "lg" }: { size?: "lg" | "default" }) {
+  const connected = useAuthStore((s) => s.player !== null);
+  if (!connected)
+    return (
+      <ConnectWalletModal>
+        <Button size={size} className="gap-2">
+          <Gamepad2 className="size-4" /> Enter the mine
+        </Button>
+      </ConnectWalletModal>
+    );
   return (
     <Button asChild size={size} className="gap-2">
       <Link to="/play">
         <Gamepad2 className="size-4" /> Enter the mine
       </Link>
     </Button>
-  );
-}
-
-function WalletButton() {
-  const connected = useAuthStore((s) => s.player !== null);
-  if (connected)
-    return (
-      <Button asChild size="lg" variant="outline" className="gap-2">
-        <Link to="/play">
-          <Gamepad2 className="size-4" /> Enter the mine
-        </Link>
-      </Button>
-    );
-  return (
-    <ConnectWalletModal>
-      <Button size="lg" variant="outline" className="gap-2">
-        <Wallet className="size-4" /> Connect wallet
-      </Button>
-    </ConnectWalletModal>
   );
 }
 
@@ -103,7 +93,6 @@ function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <EnterMineButton />
-            <WalletButton />
           </div>
         </div>
       </section>
@@ -178,7 +167,6 @@ function LandingPage() {
         <p className="mt-2 max-w-md text-sm text-muted-foreground">Connect your wallet with Xaman and your crew starts mining right away.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <EnterMineButton />
-          <WalletButton />
         </div>
       </section>
     </div>
