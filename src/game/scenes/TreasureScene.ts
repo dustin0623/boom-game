@@ -57,6 +57,7 @@ export class TreasureScene extends Phaser.Scene {
     this.map = new MapManager(this);
     this.session = useGameStore.getState().session;
     this.pendingKeys.clear();
+    this.reportedKeys = new Set(result.destroyedNodes);
     this.syncElapsed = 0;
     this.syncing = false;
     this.awaitingStage = false;
@@ -388,6 +389,7 @@ export class TreasureScene extends Phaser.Scene {
           // server's official map. The pending list belongs to the old seed.
           this.awaitingStage = false;
           this.pendingKeys.clear();
+          this.reportedKeys = new Set(result.destroyedNodes);
           this.persistPending();
           const previous = this.demo.heroes;
           const playerId = this.demo.playerId;
