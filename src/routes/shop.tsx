@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Coins, Loader2, Minus, Plus, Sparkles } from "lucide-react";
-import { HeroSprite } from "@/components/game/HeroSprite";
+import { HeroCard } from "@/components/game/HeroCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
 import { useGameStore } from "@/features/stores/game.store";
-import { HERO_RARITY_DEFS, HERO_SPRITES, HeroRarity, type HeroType } from "@/game/data/HeroRarity";
+import { HERO_RARITY_DEFS, HeroRarity } from "@/game/data/HeroRarity";
 import { listInventory } from "@/lib/game/inventory/inventory.functions";
 import { mintHeroes } from "@/lib/game/heroes/heroes.functions";
 import { MAX_MINT_PER_TX, mintCost } from "@/lib/game/heroes/mint";
@@ -109,13 +109,9 @@ function Page() {
       {minted.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold">Just minted</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {minted.map((h) => (
-              <div key={h.id} className="flex flex-col items-center rounded-xl border border-border bg-card/60 p-4 text-center">
-                <HeroSprite sprite={HERO_SPRITES[h.type as HeroType] ?? "ricky"} scale={3} />
-                <p className="mt-2 text-sm font-semibold">{h.name}</p>
-                <p className="text-[11px] capitalize text-muted-foreground">{h.rarity}</p>
-              </div>
+              <HeroCard key={h.id} hero={h} />
             ))}
           </div>
         </section>

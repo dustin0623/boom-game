@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Users } from "lucide-react";
-import { HeroSprite } from "@/components/game/HeroSprite";
+import { HeroCard } from "@/components/game/HeroCard";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useGameStore, type RosterHero } from "@/features/stores/game.store";
-import { HERO_SPRITES, type HeroType } from "@/game/data/HeroRarity";
 import { MAX_ON_MAP, canDeployEnergy } from "@/lib/config/constants/game";
 import { cn } from "@/lib/utils";
 
@@ -32,35 +31,35 @@ function HeroRow({ hero, onMapCount }: { hero: RosterHero; onMapCount: number })
           ? "Needs 50%"
           : "Deploy";
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-card/60 p-3">
-      <HeroSprite sprite={HERO_SPRITES[hero.type as HeroType] ?? "ricky"} scale={2} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold">{hero.name}</p>
-          <span className={cn("text-[10px] font-semibold uppercase", st.className)}>{st.label}</span>
+    <HeroCard
+      hero={hero}
+      footer={
+        <Button
+          size="sm"
+          className="w-full"
+          variant={hero.onMap ? "outline" : "default"}
+          disabled={!hero.onMap && !deployable}
+          onClick={() => sendCommand({ type: hero.onMap ? "recall" : "deploy", heroId: hero.id })}
+        >
+          {label}
+        </Button>
+      }
+    >
+      <div>
+        <div className="flex items-center justify-between text-[10px]">
+          <span className={cn("font-semibold uppercase", st.className)}>{st.label}</span>
+          <span className="font-mono text-muted-foreground">
+            {Math.floor(hero.energy)}/{hero.maxEnergy} energy
+          </span>
         </div>
-        <p className="text-[11px] capitalize text-muted-foreground">
-          {hero.rarity} · POW {hero.power} · SPD {hero.speed}
-        </p>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-muted">
+        <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted">
           <div
             className={cn("h-full transition-all", pct <= 20 ? "bg-destructive" : pct <= 50 ? "bg-warning" : "bg-success")}
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-          {Math.floor(hero.energy)}/{hero.maxEnergy} energy
-        </p>
       </div>
-      <Button
-        size="sm"
-        variant={hero.onMap ? "outline" : "default"}
-        disabled={!hero.onMap && !deployable}
-        onClick={() => sendCommand({ type: hero.onMap ? "recall" : "deploy", heroId: hero.id })}
-      >
-        {label}
-      </Button>
-    </div>
+    </HeroCard>
   );
 }
 
@@ -109,7 +108,7 @@ export function HeroesDrawer() {
           </Button>
         </div>
         {deployError && <p className="mt-3 text-xs text-destructive">{deployError}</p>}
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {sorted.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No heroes yet — mint some in the Shop.</p>
           ) : (
