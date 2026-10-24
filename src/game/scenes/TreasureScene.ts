@@ -15,11 +15,6 @@ const DEPLOY_ERRORS: Record<string, string> = {
   HERO_UNAVAILABLE: "That hero is not available",
 };
 
-interface SavedHeroState {
-  energy: number;
-  onMap: boolean;
-  recoveryAt: number;
-}
 import { STATIC_ANIMS } from "../engine/config/AnimationConfig";
 import { GAME_CONFIG } from "../engine/config/GameConfig";
 import { createDemoState, createSessionState } from "../demo/demo";
@@ -27,6 +22,7 @@ import type { PlayerSession } from "@/lib/game/session/types";
 
 const TICK_MS = 100;
 const SYNC_INTERVAL_MS = 4000;
+const HERO_SYNC_INTERVAL_MS = 5000;
 /** How long the board stays frozen on "Stage cleared" while the server confirms. */
 const STAGE_CLEAR_PAUSE_MS = 1600;
 
@@ -91,29 +87,22 @@ export class TreasureScene extends Phaser.Scene {
       this.demo = null;
     });
   }
-  private heroStorageKey(): string | null {
-    return this.session ? `chainframe.heroes:${this.session.playerId}` : null;
-  }
-  /** New heroes start resting with full energy; known heroes resume their saved state. */
+  /**
+   * Heroes arrive with their server-saved energy and deploy state (applied by
+   * createSessionState); clamp values and resume recovery from those stamps.
+   */
   private restoreHeroes(): void {
-    const key = this.heroStorageKey();
-    if (!key || !this.demo) return;
-    let saved: Record<string, SavedHeroState> = {};
-    try {
-      saved = JSON.parse(localStorage.getItem(key) ?? "{}");
-    } catch {
-      saved = {};
-    }
+    if (!this.demo) return;
+    const now = Date.now();
     for (const hero of Object.values(this.demo.heroes)) {
-      const s = saved[hero.id];
-      hero.energy = s ? Math.min(hero.maxEnergy, Math.max(0, s.energy)) : hero.maxEnergy;
-      hero.onMap = s ? s.onMap && hero.energy >= 1 : false;
-      // A hero saved while working starts resting only now, not from its old stamp.
-      hero.recoveryAt = s && !s.onMap ? s.recoveryAt : Date.now();
+      hero.energy = Math.min(hero.maxEnergy, Math.max(0, hero.energy));
+      hero.onMap = hero.onMap && hero.energy >= 1;
+      // A hero that was working starts resting only now, not from its old stamp.
+      if (hero.onMap) hero.recoveryAt = now;
       hero.path = [];
       hero.target = null;
     }
-    materializeRecovery(this.demo, Date.now());
+    materializeRecovery(this.demo, now);
   }
   /** Picks up heroes minted while the board is running; they arrive rested and off the map. */
   private adoptNewHeroes(): void {
@@ -149,7 +138,7 @@ export class TreasureScene extends Phaser.Scene {
       if (error) store.setDeployError(DEPLOY_ERRORS[error] ?? "Could not update hero");
     }
   }
-  private lastPersist = 0;
+  private lastHeroSync = 0;
   private publishRoster(): void {
     if (!this.demo || !this.session) return;
     const heroes = Object.values(this.demo.heroes);
@@ -160,18 +149,25 @@ export class TreasureScene extends Phaser.Scene {
         return { ...h, energy: live?.energy ?? h.maxEnergy, onMap: live?.onMap ?? false };
       }),
     );
+    this.syncHeroes(heroes, false);
+  }
+  /** Persists live hero energy/deploy state to the server (throttled unless forced). */
+  private syncHeroes(heroes: GameState["heroes"][string][], force: boolean): void {
+    const heroesSyncer = useGameStore.getState().heroesSyncer;
+    if (!heroesSyncer) return;
     const now = Date.now();
-    if (now - this.lastPersist < 1000) return;
-    this.lastPersist = now;
-    const key = this.heroStorageKey();
-    if (!key) return;
-    const out: Record<string, SavedHeroState> = {};
-    for (const h of heroes) out[h.id] = { energy: h.energy, onMap: h.onMap, recoveryAt: h.recoveryAt };
-    try {
-      localStorage.setItem(key, JSON.stringify(out));
-    } catch {
-      /* storage full or blocked: state stays in memory */
-    }
+    if (!force && now - this.lastHeroSync < HERO_SYNC_INTERVAL_MS) return;
+    this.lastHeroSync = now;
+    heroesSyncer(
+      heroes.map((h) => ({
+        id: h.id,
+        energy: Math.round(h.energy),
+        onMap: h.onMap,
+        recoveryAt: Math.round(h.recoveryAt),
+      })),
+    ).catch(() => {
+      /* hero state save failed — the next interval retries */
+    });
   }
   private clearEntities(): void {
     this.heroes.forEach((h) => h.destroy());
@@ -314,9 +310,11 @@ export class TreasureScene extends Phaser.Scene {
       localStorage.removeItem(key);
     }
   }
-  /** Send pending blocks right away (tab hidden, leaving the page). */
+  /** Send pending blocks and hero state right away (tab hidden, leaving the page). */
   private flush(): void {
-    if (!this.session || !this.pendingKeys.size) return;
+    if (!this.session) return;
+    if (this.demo) this.syncHeroes(Object.values(this.demo.heroes), true);
+    if (!this.pendingKeys.size) return;
     this.syncElapsed = SYNC_INTERVAL_MS;
     this.tickSync(0);
   }
