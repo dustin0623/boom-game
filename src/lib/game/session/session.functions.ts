@@ -1,93 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
-import { HeroRarity, HeroType, rollHeroAttributes } from "@/game/data/HeroRarity";
-import type { PlayerSession, SessionHero, SyncResult } from "./types";
+import type { PlayerSession, SyncResult } from "./types";
 import { validateClaims } from "./validate";
+import { loadPlayer, newSeed, toSession, type PlayerRow } from "./player.server";
 
-const newSeed = () => Math.floor(Math.random() * 2147483647);
-
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function starterHeroes(): SessionHero[] {
-  const rarities = [HeroRarity.Common, HeroRarity.Uncommon, HeroRarity.Rare, HeroRarity.Epic];
-  const types = Object.values(HeroType);
-  return rarities.map((rarity, i) => {
-    const a = rollHeroAttributes(rarity);
-    return {
-      id: `hero-${i}`,
-      name: `Bomber #${i + 1}`,
-      type: types[(i * 3) % types.length]!,
-      rarity,
-      power: a.power,
-      speed: a.speed,
-      stamina: a.stamina,
-      bombNumber: a.bombNum,
-      bombRange: a.bombRange,
-      maxEnergy: a.energy,
-    };
-  });
-}
-
-type PlayerRow = {
-  id: string;
-  coins: number;
-  stage: number;
-  seed: number;
-  destroyed_nodes: string[];
-  heroes: unknown;
-  token_hash: string;
-  last_sync_at: string;
+const sessionInput = (input: { playerId?: string; token?: string }) => {
+  if (typeof input?.playerId !== "string" || typeof input?.token !== "string")
+    throw new Error("Invalid input");
+  return { playerId: input.playerId, token: input.token };
 };
 
-const toSession = (r: PlayerRow): PlayerSession => ({
-  playerId: r.id,
-  coins: Number(r.coins),
-  stage: r.stage,
-  seed: Number(r.seed),
-  destroyedNodes: r.destroyed_nodes,
-  heroes: r.heroes as SessionHero[],
-});
-
-async function loadPlayer(playerId: string, token: string): Promise<PlayerRow | null> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("players").select("*").eq("id", playerId).maybeSingle();
-  if (!data || data.token_hash !== (await sha256(token))) return null;
-  return data as PlayerRow;
-}
-
 /**
- * Resumes the browser's test player or creates a new one (is_test = true).
- * The token is a random secret only this browser holds; the database stores its hash.
+ * Loads the signed-in player's saved game: coins, stage, map seed, cleared
+ * blocks and roster. The token proves this browser owns the player.
  */
-export const startTestSession = createServerFn({ method: "POST" })
-  .inputValidator((input: { playerId?: string; token?: string }) => ({
-    playerId: typeof input?.playerId === "string" ? input.playerId : undefined,
-    token: typeof input?.token === "string" ? input.token : undefined,
-  }))
-  .handler(async ({ data }): Promise<{ session: PlayerSession; token: string }> => {
-    if (data.playerId && data.token && /^[0-9a-f-]{36}$/.test(data.playerId)) {
-      const row = await loadPlayer(data.playerId, data.token);
-      if (row) return { session: toSession(row), token: data.token };
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const token = crypto.randomUUID() + crypto.randomUUID();
-    const { data: row, error } = await supabaseAdmin
-      .from("players")
-      .insert({
-        is_test: true,
-        token_hash: await sha256(token),
-        seed: newSeed(),
-        heroes: starterHeroes() as never,
-      })
-      .select("*")
-      .single();
-    if (error || !row) {
-      console.error("startTestSession insert failed", error);
-      throw new Error("Could not create test player");
-    }
-    return { session: toSession(row as PlayerRow), token };
+export const loadGameSession = createServerFn({ method: "POST" })
+  .inputValidator(sessionInput)
+  .handler(async ({ data }): Promise<PlayerSession> => {
+    const row = await loadPlayer(data.playerId, data.token);
+    if (!row) throw new Error("Invalid session — sign in again");
+    return toSession(row);
   });
 
 /** Credits verified destroyed blocks; advances the stage when the last chest is gone. */

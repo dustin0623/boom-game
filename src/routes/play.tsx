@@ -1,12 +1,12 @@
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
-import { Coins, Layers, Pause, Play, Users, Wallet } from "lucide-react";
+import { CloudCheck, CloudOff, Coins, Layers, Loader2, Users } from "lucide-react";
 import { PhaserGame } from "@/components/game/PhaserGame";
-import { ConnectWalletModal } from "@/components/auth/ConnectWalletModal";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/stores/auth.store";
-import { useGameStore } from "@/features/stores/game.store";
+import { useGameStore, type SaveStatus } from "@/features/stores/game.store";
+import { loadGameSession, syncProgress } from "@/lib/game/session/session.functions";
 
 export const Route = createFileRoute("/play")({
   head: () => ({
@@ -32,16 +32,59 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Coins; label: string;
   );
 }
 
+const SAVE_LABEL: Record<SaveStatus, string> = {
+  local: "Not connected",
+  connecting: "Connecting…",
+  saving: "Saving…",
+  saved: "Progress saved",
+  error: "Save failed — retrying",
+};
+
+function SaveIndicator() {
+  const status = useGameStore((s) => s.saveStatus);
+  const Icon = status === "error" ? CloudOff : status === "saving" || status === "connecting" ? Loader2 : CloudCheck;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs ${
+        status === "error" ? "text-destructive" : "text-muted-foreground"
+      }`}
+    >
+      <Icon className={`size-3.5 ${status === "saving" || status === "connecting" ? "animate-spin" : ""}`} />
+      {SAVE_LABEL[status]}
+    </span>
+  );
+}
+
 function PlayPage() {
-  const connected = useAuthStore((s) => s.player !== null);
-  const { coins, stage, heroesOnMap } = useGameStore();
+  const player = useAuthStore((s) => s.player);
+  const token = useAuthStore((s) => s.token);
+  const { coins, stage, heroesOnMap, session, setSession, setSaveStatus } = useGameStore();
+
+  useEffect(() => {
+    if (!player || !token || session?.playerId === player.id) return;
+    let cancelled = false;
+    setSaveStatus("connecting");
+    loadGameSession({ data: { playerId: player.id, token } })
+      .then((loaded) => {
+        if (cancelled) return;
+        setSession(loaded, (seed, keys) =>
+          syncProgress({ data: { playerId: player.id, token, seed, keys } }),
+        );
+      })
+      .catch(() => !cancelled && setSaveStatus("error"));
+    return () => {
+      cancelled = true;
+    };
+  }, [player, token, session, setSession, setSaveStatus]);
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Play"
-        description={connected ? "Your bombers are clearing the mine." : "Demo mode — progress is not saved."}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <PageHeader title="Play" description="Your bombers are clearing the mine." />
+        <div className="pt-1">
+          <SaveIndicator />
+        </div>
+      </div>
       <div className="grid gap-2 sm:grid-cols-3">
         <Stat icon={Coins} label="Coins" value={coins.toLocaleString()} />
         <Stat icon={Layers} label="Stage" value={stage} />
@@ -49,21 +92,15 @@ function PlayPage() {
       </div>
       <div className="overflow-hidden rounded-xl border border-primary/25 bg-card shadow-[0_0_40px_-12px_var(--primary)]">
         <ClientOnly fallback={<div className="aspect-[41/25] w-full animate-pulse bg-muted" />}>
-          <PhaserGame className="w-full" />
+          {session ? (
+            <PhaserGame className="w-full" />
+          ) : (
+            <div className="grid aspect-[41/25] w-full place-items-center bg-muted">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </ClientOnly>
       </div>
-      {!connected && (
-        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border bg-card/60 p-4 sm:flex-row">
-          <p className="text-sm text-muted-foreground">
-            Like it? Connect your XRPL wallet to own bombers and keep your coins.
-          </p>
-          <ConnectWalletModal>
-            <Button className="gap-2">
-              <Wallet className="size-4" /> Connect wallet
-            </Button>
-          </ConnectWalletModal>
-        </div>
-      )}
     </div>
   );
 }

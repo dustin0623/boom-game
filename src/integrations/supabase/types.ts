@@ -14,47 +14,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      player_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          player_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          player_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          player_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_inventory_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           coins: number
           created_at: string
+          deposited_balance: number
           destroyed_nodes: string[]
+          display_name: string | null
+          email: string | null
           heroes: Json
           id: string
           is_test: boolean
+          last_login_at: string | null
           last_sync_at: string
+          password_hash: string | null
           seed: number
           stage: number
           token_hash: string
           updated_at: string
+          username: string | null
           wallet_address: string | null
         }
         Insert: {
           coins?: number
           created_at?: string
+          deposited_balance?: number
           destroyed_nodes?: string[]
+          display_name?: string | null
+          email?: string | null
           heroes?: Json
           id?: string
           is_test?: boolean
+          last_login_at?: string | null
           last_sync_at?: string
+          password_hash?: string | null
           seed: number
           stage?: number
           token_hash: string
           updated_at?: string
+          username?: string | null
           wallet_address?: string | null
         }
         Update: {
           coins?: number
           created_at?: string
+          deposited_balance?: number
           destroyed_nodes?: string[]
+          display_name?: string | null
+          email?: string | null
           heroes?: Json
           id?: string
           is_test?: boolean
+          last_login_at?: string | null
           last_sync_at?: string
+          password_hash?: string | null
           seed?: number
           stage?: number
           token_hash?: string
           updated_at?: string
+          username?: string | null
           wallet_address?: string | null
         }
         Relationships: []
