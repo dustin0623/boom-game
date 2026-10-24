@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
-import { CloudCheck, CloudOff, Coins, Layers, Loader2, Users } from "lucide-react";
+import { CloudCheck, CloudOff, Coins, Layers, Loader2, Trophy, Users } from "lucide-react";
 import { PhaserGame } from "@/components/game/PhaserGame";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { HeroesDrawer } from "@/components/game/HeroesDrawer";
@@ -59,7 +59,8 @@ function SaveIndicator() {
 function PlayPage() {
   const player = useAuthStore((s) => s.player);
   const token = useAuthStore((s) => s.token);
-  const { coins, stage, heroesOnMap, session, setSession, setSaveStatus } = useGameStore();
+  const { coins, stage, heroesOnMap, session, setSession, setSaveStatus, stageClearing, saveStatus } =
+    useGameStore();
 
   useEffect(() => {
     if (!player || !token || session?.playerId === player.id) return;
@@ -92,7 +93,7 @@ function PlayPage() {
         <Stat icon={Layers} label="Stage" value={stage} />
         <Stat icon={Users} label="Bombers" value={heroesOnMap} />
       </div>
-      <div className="overflow-hidden rounded-xl border border-primary/25 bg-card shadow-[0_0_40px_-12px_var(--primary)]">
+      <div className="relative overflow-hidden rounded-xl border border-primary/25 bg-card shadow-[0_0_40px_-12px_var(--primary)]">
         <ClientOnly fallback={<div className="aspect-[41/25] w-full animate-pulse bg-muted" />}>
           {session ? (
             <PhaserGame className="w-full" />
@@ -102,6 +103,24 @@ function PlayPage() {
             </div>
           )}
         </ClientOnly>
+        {stageClearing && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-background/85 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 px-4 text-center">
+              <Trophy className="size-10 text-primary" />
+              <p className="text-lg font-semibold tracking-wide">Stage cleared!</p>
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                {(saveStatus === "saving" || saveStatus === "connecting") && (
+                  <Loader2 className="size-3.5 animate-spin" />
+                )}
+                {saveStatus === "saving" || saveStatus === "connecting"
+                  ? "Verifying and saving your progress…"
+                  : saveStatus === "error"
+                    ? "Connection issue — retrying the save…"
+                    : "Stage cleared!"}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
