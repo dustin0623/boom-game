@@ -40,6 +40,8 @@ export class TreasureScene extends Phaser.Scene {
   private demo: GameState | null = null;
   private demoElapsed = 0;
   private receivedAt = 0;
+  /** Player is away (tab hidden / window blurred): heroes stop working. */
+  private away = false;
   private session: PlayerSession | null = null;
   private pendingKeys = new Set<string>();
   private syncElapsed = 0;
