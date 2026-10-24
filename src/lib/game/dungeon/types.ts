@@ -77,3 +77,13 @@ export type GameCommand =
   | { type: "deploy"; heroId: string }
   | { type: "recall"; heroId: string }
   | { type: "pause"; paused: boolean };
+export type NodeKind = "chest" | "bush";
+/** Generated map node before it enters the live game state. */
+export interface MapNode extends Point {
+  kind: NodeKind;
+  rarity?: import("@/game/data/ChestRarity").ChestRarity;
+  maxHp: number;
+  hp: number;
+  coins: number;
+  destroyed: boolean;
+}

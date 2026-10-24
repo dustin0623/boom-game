@@ -28,19 +28,19 @@ export class BootScene extends Phaser.Scene {
     for (const rarity of Object.values(ChestRarity)) {
       this.load.image(CHEST_TEXTURE[rarity], `/assets/chests/${CHEST_TEXTURE[rarity]}.png`);
     }
-    this.load.image("bush", "/assets/bush.png");
-    this.load.spritesheet("boom", "/assets/boom.png", {
+    this.load.image("bush", "/game/tiles/bush.png");
+    this.load.spritesheet("boom", "/game/effects/boom.png", {
       frameWidth: 16,
       frameHeight: 16,
     });
 
     for (const key of Object.values(HERO_SPRITES)) {
-      this.load.spritesheet(`hero_${key}`, `/assets/characters/${key}.png`, {
+      this.load.spritesheet(`hero_${key}`, `/game/sprites/players/${key}.png`, {
         frameWidth: HERO_SPRITE_FRAME_W,
         frameHeight: HERO_SPRITE_FRAME_H,
       });
     }
-    this.load.audio("boom_sfx", "/audio/boom.wav");
+    this.load.audio("boom_sfx", "/game/audio/sfx/boom.wav");
   }
 
   create(): void {
