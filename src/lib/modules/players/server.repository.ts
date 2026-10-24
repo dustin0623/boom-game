@@ -1,5 +1,4 @@
 import { rollSeed } from "@/lib/game/dungeon/generate";
-import { starterHeroes } from "@/lib/game/session/starter";
 import { PlayerDocumentSchema, type PlayerDocument } from "./server.model";
 import type { PlayerRepository } from "./server.types";
 
@@ -79,29 +78,11 @@ export const playerRepository: PlayerRepository = {
       .single();
     if (error || !row) throw new Error(error?.message ?? "Could not create player");
     const playerId = (row as PlayerRow).id;
-    // Every player gets their own stage map and four starter bombers.
+    // New players get only their own stage map; heroes are minted with coins.
     const { error: mapError } = await admin
       .from("stage_maps")
       .insert({ player_id: playerId, stage: 1, seed });
     if (mapError) throw new Error(mapError.message);
-    const { error: heroesError } = await admin.from("heroes").insert(
-      starterHeroes().map((h) => ({
-        id: h.id,
-        player_id: playerId,
-        name: h.name,
-        type: h.type,
-        rarity: h.rarity,
-        power: h.power,
-        speed: h.speed,
-        stamina: h.stamina,
-        bomb_number: h.bombNumber,
-        bomb_range: h.bombRange,
-        max_energy: h.maxEnergy,
-        energy: h.maxEnergy,
-        on_map: false,
-      })),
-    );
-    if (heroesError) throw new Error(heroesError.message);
     return toDoc(row as PlayerRow);
   },
   async linkEmailAndPassword(id, email, passwordHash) {
