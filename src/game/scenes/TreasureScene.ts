@@ -417,7 +417,10 @@ export class TreasureScene extends Phaser.Scene {
           // Server confirmed the stage (or we drifted): hold the board frozen
           // briefly so the player sees the verification, then rebuild from the
           // server's official map. The pending list belongs to the old seed.
-          this.awaitingStage = false;
+          // Keep the gate closed until the replacement map is installed. Phaser
+          // can run update at the hold deadline before delayedCall fires; opening
+          // it here lets the empty OLD map re-arm awaitingStage and freeze the new one.
+          this.awaitingStage = true;
           this.pendingKeys.clear();
           this.reportedKeys = new Set(result.destroyedNodes);
           this.persistPending();
@@ -426,23 +429,23 @@ export class TreasureScene extends Phaser.Scene {
           this.stageHoldUntil = this.time.now + STAGE_CLEAR_PAUSE_MS;
           this.time.delayedCall(STAGE_CLEAR_PAUSE_MS, () => {
             if (!this.session || !this.scene.isActive()) return;
-            this.live = createSessionState({
+            this.session = {
               playerId,
               coins: result.coins,
               stage: result.stage,
               seed: result.seed,
               destroyedNodes: result.destroyedNodes,
-              heroes: this.session.heroes,
-            });
-            // Keep each hero's energy and deploy state across the new map.
-            for (const hero of Object.values(this.live.heroes)) {
-              const old = previous[hero.id];
-              if (!old) continue;
-              hero.energy = old.energy;
-              hero.onMap = old.onMap;
-              hero.recoveryAt = old.recoveryAt;
-            }
+              heroes: this.session.heroes.map((hero) => {
+                const old = previous[hero.id];
+                return old ? { ...hero, energy: old.energy, onMap: old.onMap, recoveryAt: old.recoveryAt } : hero;
+              }),
+            };
+            // Deployment must be present BEFORE spawning on the new map so
+            // occupied spawn tiles and each hero's live stamina are respected.
+            this.live = createSessionState(this.session);
+            this.awaitingStage = false;
             this.stageHoldUntil = 0;
+            this.tickElapsed = 0;
             this.apply(this.live, []);
             useGameStore.getState().setStageClearing(false);
           });
