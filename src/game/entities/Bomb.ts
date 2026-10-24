@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { TILE_SIZE } from '@/game/data/TileTypes';
 import { BOMB_FUSE_MS } from '@/lib/game/dungeon/rules';
-import { GAME_CONFIG } from '../config/GameConfig';
+import { GAME_CONFIG } from '../engine/config/GameConfig';
 
 /** Fuse animation only; the service decides when the bomb resolves. */
 export class Bomb {
