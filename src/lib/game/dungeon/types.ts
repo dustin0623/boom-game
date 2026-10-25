@@ -26,6 +26,7 @@ export interface GameHero extends Point {
   bombRange: number;
   energy: number;
   maxEnergy: number;
+  skills?: string[];
   onMap: boolean;
   recoveryAt: number;
   market: { listed: boolean; price: number; seller: string | null; created: number; sold: number };
@@ -38,6 +39,9 @@ export interface GameBomb extends Point {
   heroId: string;
   range: number;
   power: number;
+  /** Heavy Impact extra chest damage. */
+  heavy?: number;
+  pierce?: boolean;
   dueAt: number;
 }
 export interface GameState {

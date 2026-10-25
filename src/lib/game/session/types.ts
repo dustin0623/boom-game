@@ -12,6 +12,8 @@ export interface SessionHero {
   bombNumber: number;
   bombRange: number;
   maxEnergy: number;
+  /** Skill ids rolled at mint (see heroes/skills.ts). */
+  skills?: string[];
   /** Live state, persisted server-side in the heroes table. */
   energy?: number;
   onMap?: boolean;

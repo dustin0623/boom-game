@@ -26,6 +26,7 @@ export type HeroRow = {
   energy: number;
   on_map: boolean;
   recovery_at: string;
+  skills?: string[] | null;
 };
 
 /** A row from the public.stage_maps table. */
@@ -49,6 +50,7 @@ export function heroRowToSession(r: HeroRow): SessionHero {
     bombNumber: r.bomb_number,
     bombRange: r.bomb_range,
     maxEnergy: r.max_energy,
+    skills: r.skills ?? [],
     energy: r.energy,
     onMap: r.on_map,
     recoveryAt: new Date(r.recovery_at).getTime(),
