@@ -1,5 +1,6 @@
 import { pickHeroRarity, pickHeroType, rollHeroAttributes } from "@/game/data/HeroRarity";
 import { MINT_COST } from "@/lib/config/constants/game";
+import { rollSkills } from "./skills";
 import type { SessionHero } from "@/lib/game/session/types";
 
 /** Heroes mintable in one purchase (same limit as the Boom Miner reference). */
@@ -27,5 +28,6 @@ export function rollHero(rand: () => number = Math.random): Omit<SessionHero, "i
     bombNumber: a.bombNum,
     bombRange: a.bombRange,
     maxEnergy: a.energy,
+    skills: rollSkills(rarity, rand),
   };
 }

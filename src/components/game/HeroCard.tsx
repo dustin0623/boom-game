@@ -4,6 +4,22 @@ import { HeroSprite } from "@/components/game/HeroSprite";
 import { HERO_SPRITES, type HeroType } from "@/game/data/HeroRarity";
 import type { SessionHero } from "@/lib/game/session/types";
 import { cn } from "@/lib/utils";
+import { SKILL_INFO, type SkillId } from "@/lib/game/heroes/skills";
+import heavyImpact from "@/assets/skills/heavy_impact.png";
+import staminaSaver from "@/assets/skills/stamina_saver.png";
+import quickRest from "@/assets/skills/quick_rest.png";
+import pierce from "@/assets/skills/pierce.png";
+import bonusPay from "@/assets/skills/bonus_pay.png";
+import sprint from "@/assets/skills/sprint.png";
+
+const SKILL_ICONS: Record<SkillId, string> = {
+  heavy_impact: heavyImpact,
+  stamina_saver: staminaSaver,
+  quick_rest: quickRest,
+  pierce,
+  bonus_pay: bonusPay,
+  sprint,
+};
 
 /** Static class sets per rarity (kept literal so Tailwind keeps them). */
 const RARITY: Record<string, { ring: string; bg: string; text: string; border: string }> = {
@@ -64,6 +80,20 @@ export function HeroCard({ hero, footer, children }: { hero: SessionHero; footer
           </span>
         ))}
       </div>
+      {!!hero.skills?.length && (
+        <div className="flex flex-wrap gap-1.5">
+          {hero.skills.filter((id): id is SkillId => id in SKILL_INFO).map((id) => (
+            <span
+              key={id}
+              title={SKILL_INFO[id].effect}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium"
+            >
+              <img src={SKILL_ICONS[id]} alt="" width={14} height={14} loading="lazy" className="size-3.5 [image-rendering:pixelated]" />
+              {SKILL_INFO[id].name}
+            </span>
+          ))}
+        </div>
+      )}
       {children}
       {footer && <div className="mt-auto flex gap-2">{footer}</div>}
     </article>

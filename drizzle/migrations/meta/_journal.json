@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792886719591,
+      "tag": "0000_hero_skills",
+      "breakpoints": true
+    }
+  ]
 }

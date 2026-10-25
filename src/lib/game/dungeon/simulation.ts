@@ -1,6 +1,7 @@
 import { MAX_ON_MAP, canDeployEnergy, DAILY_CHEST_CAP_PER_HERO } from "@/lib/config/constants/game";
 import { MAP_HEIGHT, MAP_WIDTH } from "@/game/data/TileTypes";
 import { generateStageMap } from "./generate";
+import { CONSERVE_CHANCE, HEAVY_IMPACT_DAMAGE, SPRINT_MULTIPLIER, bonusPayMultiplier, hasSkill } from "@/lib/game/heroes/skills";
 import { BOMB_FUSE_MS, materializeRecovery, movementSpeed, utcDate } from "./rules";
 import type { GameBomb, GameCommand, GameHero, GameState, Point, SimulationResult } from "./types";
 
@@ -36,15 +37,22 @@ function random(state: GameState): number {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
-export function blastTiles(state: GameState, bomb: Pick<GameBomb, "x" | "y" | "range">): Point[] {
+export function blastTiles(
+  state: GameState,
+  bomb: Pick<GameBomb, "x" | "y" | "range"> & { pierce?: boolean },
+): Point[] {
   const tiles: Point[] = [{ x: bomb.x, y: bomb.y }];
   for (const d of DIRECTIONS) {
+    let pierced = !bomb.pierce;
     for (let step = 1; step <= bomb.range; step++) {
       const p = { x: bomb.x + d.x * step, y: bomb.y + d.y * step };
       if (isWall(p.x, p.y)) break;
       tiles.push(p);
       const node = state.nodes[keyOf(p)];
-      if (node && !node.destroyed) break;
+      if (node && !node.destroyed) {
+        if (pierced) break;
+        pierced = true;
+      }
     }
   }
   return tiles;
@@ -104,7 +112,7 @@ function search(
     // Prune: a far tile can't beat the best score (max realistic value ~ 4 * 6).
     if (best && 24 / (d + 2) < best.score) break;
     if (!danger.has(keyOf(p))) {
-      const blast = blastTiles(state, { x: p.x, y: p.y, range: hero.bombRange });
+      const blast = blastTiles(state, { x: p.x, y: p.y, range: hero.bombRange, pierce: hasSkill(hero, "pierce") });
       let value = 0;
       let target: string | null = null;
       let targetValue = -1;
@@ -268,7 +276,7 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
         nodesCopied = true;
       }
       const node = (state.nodes[key] = { ...existing });
-      node.hp = Math.max(0, node.hp - bomb.power);
+      node.hp = Math.max(0, node.hp - bomb.power - (node.kind === "chest" ? (bomb.heavy ?? 0) : 0));
       node.destroyed = node.hp === 0;
       if (node.destroyed && node.kind === "chest") {
         const amount = node.coins;
@@ -280,7 +288,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
     delete state.bombs[bomb.id];
     const hero = state.heroes[bomb.heroId];
     if (hero) {
-      hero.energy = Math.max(0, hero.energy - 1);
+      const conserved = hasSkill(hero, "stamina_saver") && random(state) < CONSERVE_CHANCE;
+      if (!conserved) hero.energy = Math.max(0, hero.energy - 1);
       if (hero.energy < 1) {
         hero.onMap = false;
         hero.path = [];
@@ -310,8 +319,9 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
       [bx = 0, by = 0] = b.nodeKey.split(",").map(Number);
     return ay - by || ax - bx;
   });
+  const payRate = bonusPayMultiplier(Object.values(state.heroes).filter((h) => h.onMap));
   for (const reward of result.rewards) {
-    reward.amount = state.daily.used < state.daily.cap ? reward.amount : 0;
+    reward.amount = state.daily.used < state.daily.cap ? Math.round(reward.amount * payRate) : 0;
     if (reward.amount > 0) state.daily.used++;
     state.coins += reward.amount;
     const effect = result.effects.find((e) => e.type === "reward" && e.id === reward.id);
@@ -338,7 +348,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
       hero.target = null;
       hero.path = [];
     }
-    let distance = (movementSpeed(hero.speed) * Math.max(0, Math.min(deltaMs, 100))) / 1000;
+    const sprint = hasSkill(hero, "sprint") && hero.energy < hero.maxEnergy / 2 ? SPRINT_MULTIPLIER : 1;
+    let distance = (movementSpeed(hero.speed) * sprint * Math.max(0, Math.min(deltaMs, 100))) / 1000;
     while (hero.path.length && distance > 0) {
       const p = hero.path[0]!;
       if (!walkable(state, p)) {
@@ -366,6 +377,7 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
         x: Math.round(hero.x),
         y: Math.round(hero.y),
         range: hero.bombRange,
+        pierce: hasSkill(hero, "pierce"),
       }).some((p) => state.nodes[keyOf(p)] && !state.nodes[keyOf(p)]!.destroyed);
       if (owned < hero.bombNumber && hero.energy - owned >= 1 && hit) {
         const id = `${state.mapId}:bomb:${++state.bombSerial}`;
@@ -376,6 +388,8 @@ export function stepSimulation(state: GameState, deltaMs: number, now: number): 
           y: Math.round(hero.y),
           range: hero.bombRange,
           power: hero.power,
+          heavy: hasSkill(hero, "heavy_impact") ? HEAVY_IMPACT_DAMAGE : 0,
+          pierce: hasSkill(hero, "pierce"),
           dueAt: state.time + BOMB_FUSE_MS,
         };
         state.bombs[id] = bomb;

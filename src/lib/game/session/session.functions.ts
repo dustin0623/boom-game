@@ -1,3 +1,4 @@
+import { bonusPayMultiplier } from "@/lib/game/heroes/skills";
 import { createServerFn } from "@tanstack/react-start";
 import type { PlayerSession, SyncResult } from "./types";
 import { validateClaims } from "./validate";
@@ -56,6 +57,11 @@ export const syncProgress = createServerFn({ method: "POST" })
     });
     if (!outcome.accepted) return current(row, map, 0, outcome.rejected);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Bonus Pay: rate comes from the player's deployed heroes as stored on the server.
+    const { data: deployed } = await supabaseAdmin.from("heroes").select("skills").eq("player_id", row.id).eq("on_map", true);
+    const payRate = bonusPayMultiplier((deployed ?? []).map((h) => ({ skills: h.skills ?? [] })));
+    if (payRate > 1)
+      for (const k of Object.keys(outcome.rewards)) outcome.rewards[k] = Math.round(outcome.rewards[k]! * payRate);
     // One atomic DB call: credits only keys not already saved, so retries and
     // overlapping saves can never double-pay or lose progress.
     const { data: saved, error } = await supabaseAdmin.rpc("save_progress", {
