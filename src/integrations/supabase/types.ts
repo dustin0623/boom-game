@@ -29,6 +29,7 @@ export type Database = {
           power: number
           rarity: string
           recovery_at: string
+          skills: string[]
           speed: number
           stamina: number
           type: string
@@ -48,6 +49,7 @@ export type Database = {
           power: number
           rarity: string
           recovery_at?: string
+          skills?: string[]
           speed: number
           stamina: number
           type: string
@@ -67,6 +69,7 @@ export type Database = {
           power?: number
           rarity?: string
           recovery_at?: string
+          skills?: string[]
           speed?: number
           stamina?: number
           type?: string
