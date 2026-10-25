@@ -81,15 +81,15 @@ export function HeroCard({ hero, footer, children }: { hero: SessionHero; footer
         ))}
       </div>
       {!!hero.skills?.length && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {hero.skills.filter((id): id is SkillId => id in SKILL_INFO).map((id) => (
             <span
               key={id}
               title={SKILL_INFO[id].effect}
-              className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium"
+              className="inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium"
             >
-              <img src={SKILL_ICONS[id]} alt="" width={14} height={14} loading="lazy" className="size-3.5 [image-rendering:pixelated]" />
-              {SKILL_INFO[id].name}
+              <img src={SKILL_ICONS[id]} alt="" width={14} height={14} loading="lazy" className="size-3.5 shrink-0 [image-rendering:pixelated]" />
+              <span className="truncate">{SKILL_INFO[id].name}</span>
             </span>
           ))}
         </div>
